@@ -371,4 +371,74 @@ section.block { margin-top: 18px; }
 .qa-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .qa-grid .field { margin-bottom: 0; }
 
+/* ===== 代理人端 v5 改版 ===== */
+/* 吸顶 Tab */
+.atabs {
+  position: sticky; top: 0; z-index: 60;
+  background: rgba(239,244,249,.92); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--line); padding: 8px 16px;
+}
+.atabs-inner { max-width: 480px; margin: 0 auto; display: flex; gap: 8px; }
+.atab {
+  flex: 1; text-align: center; font-size: .86rem; font-weight: 600; padding: 9px 0;
+  border-radius: 10px; background: var(--card); border: 1px solid var(--line); color: var(--ink-2);
+  cursor: pointer; white-space: nowrap; transition: .18s;
+}
+.atab.on { background: linear-gradient(135deg, var(--blue), #1273BE); border-color: transparent; color: #fff;
+  box-shadow: 0 4px 14px rgba(11,95,165,.28); }
+
+/* 工作台内容 */
+.agent-wrap { padding-bottom: 60px; }
+.pane-head { padding: 16px 2px 2px; display: flex; align-items: baseline; justify-content: space-between; }
+.pane-head h3 { font-size: 1.18rem; }
+.pane-head .pane-sub { font-size: .76rem; color: var(--ink-3); }
+
+/* 弹窗内分区标题 */
+.fsec { font-size: .78rem; font-weight: 700; color: var(--ink-3); letter-spacing: .04em;
+  margin: 16px 0 10px; padding-top: 12px; border-top: 1px solid var(--bg); }
+.fsec:first-child { margin-top: 6px; }
+
+/* 通用头像 */
+.avatar-sm {
+  flex: none; width: 38px; height: 38px; border-radius: 50%; background: var(--blue-soft); color: var(--blue-deep);
+  font-size: .9rem; font-weight: 700; display: flex; align-items: center; justify-content: center;
+}
+.avatar-sm.g-trip { background: rgba(255,255,255,.14); color: #fff; }
+
+/* 班期卡 */
+.ag-trip .proj-group.g-trip { background: linear-gradient(150deg, var(--blue-deep), #1273BE); }
+.at-date { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.at-date b { font-size: 1.18rem; font-weight: 700; color: var(--blue-deep); }
+.at-date span { font-size: .82rem; color: var(--ink-2); }
+.at-date .badge-trip { margin-left: auto; }
+.mini-btn.ok { color: var(--ok); border-color: #BBDCC9; background: var(--ok-bg); }
+
+/* 客户卡 */
+.ag-cust .cc-name { font-size: 1rem; font-weight: 700; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.ag-cust .cc-sub { font-size: .76rem; color: var(--ink-3); margin-top: 3px; }
+.ag-cust .who-chips { margin-top: 8px; }
+.who-chip.dim { background: #EDF1F5; color: var(--ink-3); }
+
+/* 项目卡(管理员) */
+.proj-off .grow { opacity: .72; }
+.pc-name { font-size: .97rem; font-weight: 700; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.pc-sub { display: flex; justify-content: space-between; gap: 8px; font-size: .73rem; color: var(--ink-3); margin-top: 4px; }
+.pc-sub span:last-child { flex: none; }
+
+/* 账户卡 */
+.ag-acc .cc-name { font-size: 1rem; font-weight: 700; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.ag-acc .cc-sub { font-size: .74rem; color: var(--ink-3); margin-top: 3px; }
+.ag-acc .cc-sub2 { font-size: .8rem; margin-top: 2px; }
+.role-badge { font-size: .66rem; padding: 1px 7px; border-radius: 6px; font-weight: 600; flex: none; }
+.rb-admin { background: #FCEAE2; color: #B4540A; }
+.rb-agent { background: var(--blue-soft); color: var(--blue-deep); }
+
+/* 名单表格 */
+.pax-table { width: 100%; border-collapse: collapse; }
+.pax-table th { font-size: .74rem; color: var(--ink-3); text-align: left; padding: 6px; border-bottom: 1.5px solid var(--line); }
+.pax-table td { font-size: .82rem; padding: 8px 6px; border-bottom: 1px solid var(--bg); vertical-align: top; }
+.pax-table td .idcard { display: block; font-size: .7rem; color: var(--ink-3); margin-top: 2px; }
+.stat-proj.full .sp-count { color: var(--warn); }
+.stat-proj.full .sp-count b { color: var(--warn); }
+
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
