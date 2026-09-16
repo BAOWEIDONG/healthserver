@@ -1,5 +1,6 @@
 /**
- * api.js — 服务接口层 v2（模拟实现）
+ * api.js — 服务接口层 v3（模拟实现）
+ * 三角色：admin 管理员(账户维护+全部权限) / agent 代理人(班车+项目) / customer 客户(登录预约)
  * 所有方法返回 Promise，模拟 200~400ms 网络延迟。
  * ★ 接真实后端：将每个方法改为 fetch('/api/...')，页面代码不用动。
  */
@@ -12,21 +13,29 @@
   const validPhone = (s) => /^1\d{10}$/.test(s);
   const validIdCard = (s) => /^\d{17}[\dXx]$/.test(s);
 
+  /** 当前登录的代理人/管理员 */
+  function currentAgent() {
+    const id = localStorage.getItem(MockDB.AGENT_KEY);
+    return db().agents.find(a => a.id === id) || null;
+  }
+  /** 管理员守卫 */
+  const requireAdmin = () => {
+    const a = currentAgent();
+    return a && a.role === 'admin' ? a : null;
+  };
+
   const Api = {
     // ================= 客户登录 =================
-    /** 发验证码（模拟：直接返回验证码供演示） */
     async sendCode(phone) {
       await delay(400);
       if (!validPhone(phone)) return { ok: false, msg: '手机号格式不正确' };
       const d = db();
-      const code = String(Math.floor(1000 + Math.random() * 9000));
       d.codes = (d.codes || []).filter(c => c.expireAt > Date.now());
-      d.codes.push({ phone, code, expireAt: Date.now() + 5 * 60 * 1000 });
+      d.codes.push({ phone, code: String(Math.floor(1000 + Math.random() * 9000)), expireAt: Date.now() + 5 * 60 * 1000 });
       persist(d);
-      return { ok: true, demoCode: code }; // 真实后端：短信下发，不返回明文
+      return { ok: true, demoCode: d.codes[d.codes.length - 1].code };
     },
 
-    /** 登录/注册 */
     async login(phone, code) {
       await delay(400);
       const d = db();
@@ -34,6 +43,11 @@
       if (!rec) return { ok: false, msg: '验证码已过期，请重新获取' };
       if (rec.code !== code) return { ok: false, msg: '验证码不正确' };
       d.codes = d.codes.filter(c => c !== rec);
+      // 已被提升为代理人的手机号不可在客户端预约登录
+      const asAgent = d.agents.find(a => a.phone === phone);
+      if (asAgent) return { ok: false, msg: '该手机号为代理人账号，请从代理人端登录' };
+      // 注册/登录用户档案
+      if (!d.users.find(u => u.phone === phone)) d.users.push({ phone, name: '', idCard: '', role: 'customer', createdAt: Date.now() });
       persist(d);
       localStorage.setItem(MockDB.SESSION_KEY, phone);
       return { ok: true };
@@ -41,14 +55,14 @@
 
     logout() { localStorage.removeItem(MockDB.SESSION_KEY); },
 
-    /** 当前登录用户档案（从历史预约合成姓名/身份证） */
     async me() {
       await delay(120);
       const phone = S();
       if (!phone) return null;
       const d = db();
+      const u = d.users.find(x => x.phone === phone);
       const last = [...d.reservations].reverse().find(r => r.phone === phone);
-      return { phone, name: last?.name || '', idCard: last?.idCard || '' };
+      return { phone, name: u?.name || last?.name || '', idCard: u?.idCard || last?.idCard || '' };
     },
 
     // ================= 客户预约 =================
@@ -61,7 +75,6 @@
       });
     },
 
-    /** 开放中项目 + 指定班期名额占用 */
     async listProjects(tripId) {
       await delay();
       const d = db();
@@ -71,10 +84,7 @@
       });
     },
 
-    /**
-     * 预约（须已登录）。同一手机号同一班期只占1座。
-     * payload: { tripId, projectIds[], name, idCard? }
-     */
+    /** 预约（须客户登录）。同一手机号同一班期只占1座。 */
     async reserve(payload) {
       await delay(500);
       const phone = S();
@@ -108,11 +118,14 @@
         if (d.reservations.some(r => r.tripId === trip.id && r.projectId === pid && r.phone === phone)) continue;
         d.reservations.push({ id: 'R' + now + pid, tripId: trip.id, projectId: pid, name: name.trim(), phone, idCard: payload.idCard || '', createdAt: now });
       }
+      // 同步用户档案
+      const u = d.users.find(x => x.phone === phone);
+      if (u) { u.name = name.trim(); if (payload.idCard) u.idCard = payload.idCard; }
       persist(d);
       return { ok: true, tripId: trip.id };
     },
 
-    /** 我的预约（登录态） */
+    /** 我的预约（按班期分组） */
     async myReservations() {
       await delay();
       const phone = S();
@@ -142,7 +155,6 @@
       }).sort((a, b) => b.createdAt - a.createdAt);
     },
 
-    /** 取消某班期某项目的预约 */
     async cancelReservation(tripId, projectId) {
       await delay(300);
       const phone = S();
@@ -153,15 +165,23 @@
       return { ok: d.reservations.length < before };
     },
 
-    // ================= 代理人端 =================
+    // ================= 代理人/管理员端 =================
     async agentLogin(code) {
       await delay();
       const a = db().agents.find(x => x.code === code);
       return a ? { ok: true, agent: a } : { ok: false, msg: '邀请码不正确' };
     },
 
+    /** 当前登录的代理人/管理员信息（自动登录用） */
+    async whoAmI() {
+      await delay(120);
+      const a = currentAgent();
+      return a ? { ok: true, agent: a } : { ok: false };
+    },
+
     async createTrip({ date, time, meetup, seats = 40 }) {
       await delay(350);
+      if (!currentAgent()) return { ok: false, msg: '请先登录' };
       const d = db();
       if (d.trips.some(t => t.date === date)) return { ok: false, msg: '同一天已有班期' };
       const dt = new Date(date);
@@ -179,26 +199,27 @@
 
     async closeTrip(tripId) {
       await delay(200);
+      if (!currentAgent()) return { ok: false, msg: '请先登录' };
       const d = db();
       const t = d.trips.find(x => x.id === tripId);
       if (t) { t.status = t.status === 'open' ? 'closed' : 'open'; persist(d); }
       return { ok: true };
     },
 
-    /** 代理人：项目全量管理视图（含各班期占用） */
     async adminProjects() {
       await delay();
+      if (!currentAgent()) return [];
       const d = db();
       return d.projects.map(p => {
         const taken = d.reservations.filter(r => r.projectId === p.id).length;
-        const takers = [...new Set(d.reservations.filter(r => r.projectId === p.id).map(r => r.phone))].length;
-        return { ...p, takenTotal: taken, takers };
+        const takers = new Set(d.reservations.filter(r => r.projectId === p.id).map(r => r.phone));
+        return { ...p, takenTotal: taken, takers: takers.size };
       });
     },
 
-    /** 新增/编辑项目 */
     async saveProject(p) {
       await delay(350);
+      if (!currentAgent()) return { ok: false, msg: '请先登录' };
       const d = db();
       if (!p.name?.trim()) return { ok: false, msg: '请填写项目名称' };
       const quota = Number(p.quota);
@@ -220,18 +241,18 @@
       return { ok: true };
     },
 
-    /** 项目 上架/下架 */
     async toggleProject(projectId) {
       await delay(200);
+      if (!currentAgent()) return { ok: false, msg: '请先登录' };
       const d = db();
       const p = d.projects.find(x => x.id === projectId);
       if (p) { p.active = !p.active; persist(d); }
       return { ok: true, active: p?.active };
     },
 
-    /** 班期详情：名单 + 每人项目 + 项目统计 */
     async tripDetail(tripId) {
       await delay();
+      if (!currentAgent()) return null;
       const d = db();
       const t = d.trips.find(x => x.id === tripId);
       if (!t) return null;
@@ -249,6 +270,103 @@
         who: rs.filter(r => r.projectId === p.id).map(r => r.name),
       }));
       return { trip: t, pax, stats };
+    },
+
+    // ================= 账户管理（仅管理员） =================
+    /** 账户全景：代理人/管理员 + 客户 */
+    async listAccounts() {
+      await delay();
+      const me = requireAdmin();
+      if (!me) return { ok: false, msg: '仅管理员可查看账户' };
+      const d = db();
+      const customers = d.users.map(u => {
+        const rs = d.reservations.filter(r => r.phone === u.phone);
+        return {
+          ...u,
+          resvCount: rs.length,
+          lastActive: rs.length ? Math.max(...rs.map(r => r.createdAt)) : u.createdAt,
+          asAgent: d.agents.find(a => a.phone === u.phone)?.id || null,
+        };
+      }).sort((a, b) => b.lastActive - a.lastActive);
+      return { ok: true, agents: d.agents.map(a => ({ ...a })), customers, meId: me.id };
+    },
+
+    /** 新增/编辑 代理人或管理员账户 */
+    async saveAgentAccount({ id, name, code, role, phone }) {
+      await delay(350);
+      if (!requireAdmin()) return { ok: false, msg: '仅管理员可维护账户' };
+      const d = db();
+      if (!name?.trim()) return { ok: false, msg: '请填写姓名' };
+      if (!/^\d{4,8}$/.test(code || '')) return { ok: false, msg: '邀请码须为4~8位数字' };
+      if (phone && !validPhone(phone)) return { ok: false, msg: '手机号格式不正确' };
+      if (d.agents.some(a => a.code === code && a.id !== id)) return { ok: false, msg: '该邀请码已被占用' };
+      if (phone && d.agents.some(a => a.phone === phone && a.id !== id)) return { ok: false, msg: '该手机号已是代理人' };
+      if (id) {
+        const a = d.agents.find(x => x.id === id);
+        if (!a) return { ok: false, msg: '账户不存在' };
+        // 不能取消自己的管理员身份（保证至少一个管理员）
+        if (a.id === currentAgent().id && a.role === 'admin' && role !== 'admin') {
+          return { ok: false, msg: '不能降级自己的管理员身份' };
+        }
+        Object.assign(a, { name: name.trim(), code, role: role || a.role, phone: phone || '' });
+      } else {
+        d.agents.push({ id: 'AG' + String(Date.now()).slice(-6), name: name.trim(), code, role: role || 'agent', phone: phone || '' });
+      }
+      persist(d);
+      return { ok: true };
+    },
+
+    /** 移除代理人（降回客户；不能移除自己） */
+    async removeAgent(id) {
+      await delay(300);
+      const me = requireAdmin();
+      if (!me) return { ok: false, msg: '仅管理员可维护账户' };
+      if (id === me.id) return { ok: false, msg: '不能移除自己的账户' };
+      const d = db();
+      const a = d.agents.find(x => x.id === id);
+      if (!a) return { ok: false, msg: '账户不存在' };
+      // 保底：至少保留一个管理员
+      if (a.role === 'admin' && d.agents.filter(x => x.role === 'admin').length <= 1) {
+        return { ok: false, msg: '系统至少需保留一个管理员' };
+      }
+      d.agents = d.agents.filter(x => x.id !== id);
+      if (a.phone && !d.users.find(u => u.phone === a.phone)) {
+        d.users.push({ phone: a.phone, name: a.name, idCard: '', role: 'customer', createdAt: Date.now() });
+      }
+      persist(d);
+      return { ok: true };
+    },
+
+    /** 提升客户为代理人（自动生成邀请码） */
+    async promoteCustomer(phone) {
+      await delay(350);
+      if (!requireAdmin()) return { ok: false, msg: '仅管理员可维护账户' };
+      const d = db();
+      const u = d.users.find(x => x.phone === phone);
+      if (!u) return { ok: false, msg: '客户不存在' };
+      if (d.agents.some(a => a.phone === phone)) return { ok: false, msg: '该手机号已是代理人' };
+      let code;
+      do { code = String(Math.floor(1000 + Math.random() * 9000)); } while (d.agents.some(a => a.code === code));
+      d.agents.push({ id: 'AG' + String(Date.now()).slice(-6), name: u.name || '代理人' + phone.slice(-4), code, role: 'agent', phone });
+      u.role = 'agent';
+      persist(d);
+      return { ok: true, code, name: u.name || phone };
+    },
+
+    /** 编辑客户档案（姓名/身份证） */
+    async updateCustomer({ phone, name, idCard }) {
+      await delay(300);
+      if (!requireAdmin()) return { ok: false, msg: '仅管理员可维护账户' };
+      const d = db();
+      const u = d.users.find(x => x.phone === phone);
+      if (!u) return { ok: false, msg: '客户不存在' };
+      if (name?.trim()) u.name = name.trim();
+      if (idCard !== undefined) {
+        if (idCard && !validIdCard(idCard)) return { ok: false, msg: '身份证号格式不正确' };
+        u.idCard = idCard || '';
+      }
+      persist(d);
+      return { ok: true };
     },
   };
 

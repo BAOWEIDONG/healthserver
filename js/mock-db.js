@@ -1,11 +1,12 @@
 /**
- * mock-db.js — 模拟数据层 v2（localStorage 持久化）
+ * mock-db.js — 模拟数据层 v3（localStorage 持久化）
+ * 三角色：admin 管理员(账户维护) / agent 代理人(班车+项目) / customer 客户(登录预约)
  * 接真实后端时，只需替换 api.js，本文件可整体删除。
  */
 (function () {
-  const DB_KEY = 'bybus_db_v2';
-  const SESSION_KEY = 'bybus_session'; // 登录手机号
-  const AGENT_KEY = 'bybus_agent';
+  const DB_KEY = 'bybus_db_v3';
+  const SESSION_KEY = 'bybus_session'; // 客户登录手机号
+  const AGENT_KEY = 'bybus_agent';    // 代理人/管理员登录 id
 
   const seed = () => ({
     // ===== 班车（团期）===== 40座/班，每周1-2班
@@ -15,7 +16,7 @@
       { id: 'T260926A', date: '2026-09-26', time: '08:30', meetup: '望京集合点 · 大巴车', seats: 40, status: 'open' },
     ],
 
-    // ===== 医疗项目（代理人可自定义增删改、开关、名额）=====
+    // ===== 医疗项目 =====
     projects: [
       {
         id: 'P1', name: '疼痛治疗 · 黄金雷针', group: 'A', active: true,
@@ -56,12 +57,19 @@
     // { id, tripId, projectId, phone, name, idCard, createdAt }
     reservations: [],
 
-    // ===== 登录验证码 =====
-    // { phone, code, expireAt }
+    // ===== 登录验证码 ===== { phone, code, expireAt }
     codes: [],
 
-    // ===== 代理人 =====
-    agents: [{ id: 'AG001', name: '王代理', code: '8888' }],
+    // ===== 客户账户（客户端验证码登录后注册）=====
+    // { phone, name, idCard, role: 'customer'|'agent', createdAt }
+    users: [],
+
+    // ===== 代理人 / 管理员账户（邀请码登录）=====
+    // { id, name, code, role: 'agent'|'admin', phone? }
+    agents: [
+      { id: 'AG001', name: '王代理', code: '8888', role: 'agent' },
+      { id: 'AG002', name: '系统管理员', code: '0000', role: 'admin' },
+    ],
   });
 
   const load = () => {

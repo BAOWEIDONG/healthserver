@@ -10,21 +10,21 @@
 
 <!-- 登录 -->
 <div class="wrap" id="login-view" style="padding-top:60px">
-  <div class="login-hero">
+    <div class="login-hero">
     <div class="logo" style="background:linear-gradient(150deg,#0B5FA5,#1B9AAA)">
       <span style="font-size:1.9rem">🚌</span>
     </div>
     <h1>代理人工作台</h1>
-    <p>大巴到院 · 团期 / 项目 / 名单管理</p>
+    <p>大巴到院 · 团期 / 项目 / 账户管理</p>
   </div>
   <div class="card" style="padding:22px 18px">
     <div class="field">
       <label>邀请码 <span class="req">*</span></label>
-      <input id="lg-code" placeholder="演示邀请码：8888" maxlength="8">
+      <input id="lg-code" placeholder="代理 8888 / 管理员 0000" maxlength="8">
     </div>
     <button class="btn-step primary" id="lg-btn" style="width:100%;padding:14px">进入工作台</button>
     <p style="font-size:.74rem;color:var(--ink-3);text-align:center;margin-top:12px">
-      客户端入口：index.html（客户扫码进入）
+      角色权限：管理员(账户+全部) · 代理人(班车+项目) · 客户(登录预约)
     </p>
   </div>
 </div>
@@ -34,7 +34,10 @@
 
   <div class="agent-header">
     <div class="who">
-      <h2 id="who-name">代理人工作台</h2>
+      <div>
+        <h2 id="who-name">代理人工作台</h2>
+        <div style="font-size:.74rem;opacity:.85;margin-top:3px" id="who-role"></div>
+      </div>
       <button class="mini-btn" id="btn-logout" style="background:rgba(255,255,255,.15);border-color:transparent;color:#fff">退出</button>
     </div>
     <div class="stat-grid">
@@ -47,6 +50,7 @@
   <div class="atabs">
     <button class="atab on" data-tab="trips">🚌 班期管理</button>
     <button class="atab" data-tab="projects">🏥 项目管理</button>
+    <button class="atab" data-tab="accounts" id="tab-accounts" style="display:none">👤 账户管理</button>
   </div>
 
   <div class="wrap">
@@ -123,6 +127,62 @@
       <button class="btn-step" id="pm-cancel">取消</button>
       <button class="btn-step primary" id="pm-save">保存</button>
     </div>
+    <!-- ============ Tab3 账户管理（仅管理员） ============ -->
+    <section id="tab-accounts" style="display:none">
+      <section class="block">
+        <div class="block-title">代理人 / 管理员账户 <span class="hint">邀请码登录工作台</span></div>
+        <div id="acc-agents"></div>
+        <button class="btn-step primary" id="acc-add" style="width:100%;padding:13px">＋ 新增代理人</button>
+      </section>
+      <section class="block">
+        <div class="block-title">客户账户 <span class="hint">手机号验证码登录客户端</span></div>
+        <div id="acc-customers"></div>
+        <div class="empty" id="acc-empty" style="display:none">暂无客户注册（客户在 index.html 登录后自动建档）</div>
+      </section>
+    </section>
+  </div>
+</div>
+
+<!-- 账户编辑弹层 -->
+<div class="modal-mask" id="acc-modal" style="display:none">
+  <div class="modal" style="text-align:left;max-width:360px">
+    <h3 style="text-align:center" id="am-title">新增代理人</h3>
+    <div class="field"><label>姓名 <span class="req">*</span></label><input id="am-name" maxlength="20"></div>
+    <div class="field-row">
+      <div class="field"><label>邀请码 <span class="req">*</span></label><input id="am-code" maxlength="8" inputmode="numeric"></div>
+      <div class="field"><label>角色</label>
+        <select id="am-role"><option value="agent">代理人</option><option value="admin">管理员</option></select></div>
+    </div>
+    <div class="field"><label>绑定手机号（可选，绑定后该手机号不可在客户端预约登录）</label>
+      <input id="am-phone" type="tel" maxlength="11" placeholder="11位手机号"></div>
+    <div class="modal-actions">
+      <button class="btn-step" id="am-cancel">取消</button>
+      <button class="btn-step primary" id="am-save">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 客户档案编辑弹层 -->
+<div class="modal-mask" id="cust-modal" style="display:none">
+  <div class="modal" style="text-align:left;max-width:360px">
+    <h3 style="text-align:center">编辑客户档案</h3>
+    <div class="field"><label>手机号</label><input id="cm-phone" disabled style="background:var(--bg);color:var(--ink-2)"></div>
+    <div class="field"><label>姓名</label><input id="cm-name" maxlength="20"></div>
+    <div class="field" style="margin-bottom:0"><label>身份证号</label><input id="cm-id" maxlength="18"></div>
+    <div class="modal-actions">
+      <button class="btn-step" id="cm-cancel">取消</button>
+      <button class="btn-step primary" id="cm-save">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 提升成功·邀请码弹层 -->
+<div class="modal-mask" id="acc-code-modal" style="display:none">
+  <div class="modal">
+    <div style="font-size:2.2rem">🎉</div>
+    <h3 style="margin-top:6px">已提升为代理人</h3>
+    <p id="acc-code-text" style="font-size:.95rem;font-weight:600;color:var(--blue-deep);margin-top:8px"></p>
+    <button class="btn-step primary" id="acc-code-close" style="width:100%;margin-top:16px">知道了</button>
   </div>
 </div>
 
