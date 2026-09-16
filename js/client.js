@@ -108,6 +108,8 @@
     btn.onclick = () => {
       document.querySelectorAll('.tabbar button').forEach(b => b.classList.toggle('on', b === btn));
       const mine = btn.dataset.tab === 'mine';
+      // 若当前在详情页/成功页（不在主界面），先切回主界面并恢复 tabbar，否则只会改 app 内的分块、点tab无反应
+      if ($('#view-app').style.display !== '') { showView('view-app'); $('#tabbar').style.display = ''; }
       bar().style.display = mine ? 'none' : '';
       document.querySelector('.hero').style.display = mine ? 'none' : '';
       document.querySelector('.steps').style.display = mine ? 'none' : '';
