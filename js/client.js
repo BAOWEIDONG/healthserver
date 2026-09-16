@@ -17,6 +17,16 @@
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => el.remove(), 2800);
   }
+  /** 购买链接：H5 直接打开；小程序在微信环境外提示 */
+  function openMall(type, url) {
+    if (type === 'h5') {
+      if (!url) return toast('购买链接未配置');
+      window.open(url, '_blank');
+      return;
+    }
+    // 小程序：微信内可跳转，演示环境提示
+    toast('小程序链接，请在微信中打开本页面购买');
+  }
   function showView(name) {
     ['view-login', 'view-app', 'view-success', 'view-detail'].forEach(v =>
       $('#' + v).style.display = v === name ? '' : 'none');
@@ -163,13 +173,15 @@
             <div class="quota-bar"><i class="${p.left <= Math.ceil(p.quota * 0.15) ? 'low' : ''}" style="width:${pct}%"></i></div>
             <div class="quota-text"><span>已约 ${p.taken}/${p.quota}</span><span>${full ? '名额已满' : `剩 ${p.left} 个`}</span></div>
             ${p.mall ? `<div class="mall-row">🏥 北医商城 · ${p.mall.name} <b>${p.mall.price}</b>
-              <button class="btn-mall">去购买 ›</button></div>` : ''}
+              <button class="btn-mall" data-mtype="${p.mall.type || 'mini'}" data-murl="${p.mall.url || ''}">去购买 ›</button></div>` : ''}
           </div>
           <div class="check"></div>
         </div>`;
-      el.querySelector('.btn-mall')?.addEventListener('click', e => {
-        e.stopPropagation();
-        toast('演示环境：此处跳转北医商城小程序');
+      el.querySelectorAll('.btn-mall').forEach(b => {
+        b.addEventListener('click', e => {
+          e.stopPropagation();
+          openMall(b.dataset.mtype, b.dataset.murl);
+        });
       });
       if (!full) el.onclick = () => {
         state.sel.has(p.id) ? state.sel.delete(p.id) : state.sel.add(p.id);
@@ -298,14 +310,16 @@
         <b>${i.name}</b>
         <div style="font-size:.75rem;color:var(--ink-3);margin-top:2px">${i.note || ''}</div>
         ${i.mall ? `<div class="mall-row" style="margin-top:8px;padding-top:8px">🏥 北医商城 · ${i.mall.name} <b>${i.mall.price}</b>
-          <button class="btn-mall">去购买 ›</button></div>` : ''}
+          <button class="btn-mall" data-mtype="${i.mall.type || 'mini'}" data-murl="${i.mall.url || ''}">去购买 ›</button></div>` : ''}
       </div></div>`).join('');
     $('#dp-person').innerHTML = `
       <div class="dp-row"><div class="k">姓名</div><div class="v">${m.items[0].person}</div></div>
       <div class="dp-row"><div class="k">手机号</div><div class="v">${state.me.phone}</div></div>
       ${m.items[0].idCard ? `<div class="dp-row"><div class="k">身份证</div><div class="v">${m.items[0].idCard.replace(/(\d{4})\d+(\d{4})/, '$1****$2')}</div></div>` : ''}
       <div class="dp-row"><div class="k">提交时间</div><div class="v">${fmtTime(m.createdAt)}</div></div>`;
-    $('#dp-items').querySelectorAll('.btn-mall').forEach(b => b.onclick = () => toast('演示环境：此处跳转北医商城小程序'));
+    $('#dp-items').querySelectorAll('.btn-mall').forEach(b => {
+      b.onclick = e => { e.stopPropagation(); openMall(b.dataset.mtype, b.dataset.murl); };
+    });
     $('#dp-cancel').style.display = '';
     showView('view-detail');
   }

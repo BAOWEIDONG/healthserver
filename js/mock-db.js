@@ -1,29 +1,30 @@
 /**
- * mock-db.js — 模拟数据层 v3（localStorage 持久化）
- * 三角色：admin 管理员(账户维护) / agent 代理人(班车+项目) / customer 客户(登录预约)
+ * mock-db.js — 模拟数据层 v4（localStorage 持久化）
+ * 权限：admin 管理员(项目配置+账户维护) / agent 代理人(班车+自己的客户) / customer 客户(登录预约)
+ * mall 购买链接支持 type: 'h5'(H5链接) | 'mini'(小程序)
  * 接真实后端时，只需替换 api.js，本文件可整体删除。
  */
 (function () {
-  const DB_KEY = 'bybus_db_v3';
+  const DB_KEY = 'bybus_db_v4';
   const SESSION_KEY = 'bybus_session'; // 客户登录手机号
   const AGENT_KEY = 'bybus_agent';    // 代理人/管理员登录 id
 
   const seed = () => ({
-    // ===== 班车（团期）===== 40座/班，每周1-2班
+    // ===== 班车（团期）===== 40座/班，每周1-2班；createdBy 归属代理人 =====
     trips: [
-      { id: 'T260919A', date: '2026-09-19', time: '08:30', meetup: '国贸集合点 · 大巴车', seats: 40, status: 'open' },
-      { id: 'T260924A', date: '2026-09-24', time: '08:30', meetup: '国贸集合点 · 大巴车', seats: 40, status: 'open' },
-      { id: 'T260926A', date: '2026-09-26', time: '08:30', meetup: '望京集合点 · 大巴车', seats: 40, status: 'open' },
+      { id: 'T260919A', date: '2026-09-19', time: '08:30', meetup: '国贸集合点 · 大巴车', seats: 40, status: 'open', createdBy: 'AG001' },
+      { id: 'T260924A', date: '2026-09-24', time: '08:30', meetup: '国贸集合点 · 大巴车', seats: 40, status: 'open', createdBy: 'AG001' },
+      { id: 'T260926A', date: '2026-09-26', time: '08:30', meetup: '望京集合点 · 大巴车', seats: 40, status: 'open', createdBy: 'AG001' },
     ],
 
-    // ===== 医疗项目 =====
+    // ===== 医疗项目（仅管理员可配置）=====
     projects: [
       {
         id: 'P1', name: '疼痛治疗 · 黄金雷针', group: 'A', active: true,
         desc: '针对颈肩腰腿慢性疼痛的针刀治疗，免挂号，首次免费体验，现场排队。',
         needId: true, queue: true, firstFree: true,
         quota: 30, price: 0, note: '首次免费 · 免挂号 · 需身份证+手机号登记',
-        mall: { name: '黄金雷针月卡 · 8次', price: '价格待定' },
+        mall: { name: '黄金雷针月卡 · 8次', price: '价格待定', type: 'mini', url: '' },
       },
       {
         id: 'P2', name: '全科问诊 · 体检报告解读', group: 'B', active: true,
@@ -39,7 +40,7 @@
         id: 'P4', name: '美容皮肤检测', group: 'C', active: true,
         desc: '专业皮肤检测仪深度分析肤质，免费体验。',
         quota: 10, price: 0, note: '免费 · 名额有限',
-        mall: { name: '美容年卡 · 4次', price: '¥4500' },
+        mall: { name: '美容年卡 · 4次', price: '¥4500', type: 'mini', url: '' },
       },
       {
         id: 'P5', name: '中医坐诊', group: 'C', active: true,
@@ -60,11 +61,11 @@
     // ===== 登录验证码 ===== { phone, code, expireAt }
     codes: [],
 
-    // ===== 客户账户（客户端验证码登录后注册）=====
+    // ===== 客户账户 =====
     // { phone, name, idCard, role: 'customer'|'agent', createdAt }
     users: [],
 
-    // ===== 代理人 / 管理员账户（邀请码登录）=====
+    // ===== 代理人 / 管理员账户 =====
     // { id, name, code, role: 'agent'|'admin', phone? }
     agents: [
       { id: 'AG001', name: '王代理', code: '8888', role: 'agent' },

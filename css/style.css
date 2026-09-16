@@ -24,7 +24,8 @@ body {
   background: var(--bg); color: var(--ink); line-height: 1.55;
   min-height: 100vh; font-size: 16px;
 }
-.wrap { max-width: 480px; margin: 0 auto; padding: 0 16px 110px; }
+.wrap { max-width: 480px; margin: 0 auto; padding: 0 16px 172px; }
+.wrap.no-bars { padding-bottom: 40px; }
 button { font-family: inherit; }
 
 /* ===== 顶部横幅 ===== */
@@ -133,12 +134,12 @@ section.block { margin-top: 18px; }
 .checkbox-row { display: flex; align-items: center; gap: 8px; font-size: .84rem; color: var(--ink-2); margin-bottom: 12px; cursor: pointer; }
 .checkbox-row input { width: 17px; height: 17px; accent-color: var(--blue); }
 
-/* ===== 悬浮底部操作栏 ===== */
+/* ===== 悬浮底部操作栏（位于 Tabbar 上方） ===== */
 .actionbar {
-  position: fixed; left: 50%; transform: translateX(-50%); bottom: 0; width: 100%; max-width: 480px;
+  position: fixed; left: 50%; transform: translateX(-50%); bottom: 54px; width: 100%; max-width: 480px;
   background: rgba(255,255,255,.94); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
-  border-top: 1px solid var(--line); padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); z-index: 40;
-  display: flex; gap: 10px; box-shadow: 0 -4px 24px rgba(11,70,125,.08);
+  border: 1px solid var(--line); border-radius: 18px 18px 0 0; padding: 10px 16px; z-index: 40;
+  display: flex; gap: 10px; box-shadow: 0 -6px 28px rgba(11,70,125,.12);
 }
 .actionbar .bar-info { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; font-size: .72rem; color: var(--ink-3); line-height: 1.35; }
 .actionbar .bar-info b { font-size: .84rem; color: var(--ink); }
@@ -214,6 +215,7 @@ section.block { margin-top: 18px; }
 .success-tips { margin-top: 14px; font-size: .75rem; color: var(--ink-3); background: var(--bg); border-radius: 10px; padding: 10px 12px; text-align: left; }
 
 /* ===== 我的预约 ===== */
+#view-mine .mine-inner { max-width: 480px; margin: 0 auto; padding: 0 16px 130px; }
 .mine-card { position: relative; }
 .mine-card .mc-head { display: flex; align-items: center; gap: 9px; }
 .mine-card .mc-date { font-size: 1.05rem; font-weight: 700; color: var(--blue-deep); }

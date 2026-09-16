@@ -1,9 +1,11 @@
-/* agent.js — 代理人端 v2：班期 + 项目管理 + 名单明细 */
+/* agent.js — v4：按角色显示 Tab
+   agent：班期 + 我的客户（仅自己班期的客户，互相独立）
+   admin：班期 + 我的客户(全部) + 项目管理 + 账户管理（仅管理员/代理人账户） */
 (function () {
   const $ = s => document.querySelector(s);
   const WEEK = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
   const fmtDate = ds => { const d = new Date(ds.replace(/-/g, '/')); return `${d.getMonth() + 1}月${d.getDate()}日(${WEEK[d.getDay()]})`; };
-  const GROUP_NAMES = { A: 'A组', B: 'B组', C: 'C组', D: 'D组' };
+  const fmtTime = ts => { const d = new Date(ts); return `${d.getMonth() + 1}/${d.getDate()}`; };
 
   let toastTimer;
   function toast(msg) {
@@ -15,10 +17,11 @@
     toastTimer = setTimeout(() => el.remove(), 2800);
   }
 
-  let editing = null; // 当前编辑项目对象
-
-  let myRole = 'agent'; // 当前登录角色
-  const ROLE_TEXT = { agent: '代理人 · 可管理班车与项目', admin: '管理员 · 账户维护+全部权限' };
+  let myRole = 'agent';
+  const ROLE_TEXT = {
+    agent: '代理人 · 班期管理与我的客户',
+    admin: '管理员 · 项目配置 + 账户维护 + 全部权限',
+  };
 
   // ===== 登录 =====
   $('#lg-btn').onclick = async () => {
@@ -36,137 +39,28 @@
     $('#work-view').style.display = '';
     $('#who-name').textContent = agent.name + ' · 工作台';
     $('#who-role').textContent = ROLE_TEXT[myRole];
-    // 账户管理 Tab 仅管理员可见
+    $('#tab-projects').style.display = myRole === 'admin' ? '' : 'none';
     $('#tab-accounts').style.display = myRole === 'admin' ? '' : 'none';
+    $('#cust-title').childNodes[0].textContent = myRole === 'admin' ? '客户总览 ' : '我的客户 ';
+    $('#cust-hint').textContent = myRole === 'admin' ? '全部代理人名下客户' : '客户信息仅您可见，代理人之间相互独立';
     loadAll();
-    loadProjects();
-    if (myRole === 'admin') loadAccounts();
+    loadCustomers();
+    if (myRole === 'admin') { loadProjects(); loadAccounts(); }
   }
 
-  // ===== Tab 切换（含账户Tab） =====
+  // ===== Tab 切换 =====
   document.querySelectorAll('.atab').forEach(btn => {
     btn.onclick = () => {
       document.querySelectorAll('.atab').forEach(b => b.classList.toggle('on', b === btn));
-      const tab = btn.dataset.tab;
-      $('#tab-trips').style.display = tab === 'trips' ? '' : 'none';
-      $('#tab-projects').style.display = tab === 'projects' ? '' : 'none';
-      $('#tab-accounts').style.display = tab === 'accounts' ? '' : 'none';
+      ['trips', 'customers', 'projects', 'accounts'].forEach(t => {
+        $('#tab-' + t).style.display = btn.dataset.tab === t ? '' : 'none';
+      });
       window.scrollTo(0, 0);
     };
   });
 
-  // ===== 账户管理（仅管理员） =====
-  let accData = null, accEditing = null, custEditing = null;
-  const fmtTime = ts => { const d = new Date(ts); return `${d.getMonth() + 1}/${d.getDate()}`; };
-
-  async function loadAccounts() {
-    const r = await Api.listAccounts();
-    if (!r.ok) return toast(r.msg);
-    accData = r;
-    // 代理人/管理员
-    $('#acc-agents').innerHTML = '';
-    r.agents.forEach(a => {
-      const el = document.createElement('div');
-      el.className = 'card';
-      el.innerHTML = `
-        <div class="ag-card-head">
-          <div class="avatar-sm" style="width:36px;height:36px;flex:none;border-radius:50%;background:var(--blue-soft);color:var(--blue-deep);font-weight:700;display:flex;align-items:center;justify-content:center">${a.name[0]}</div>
-          <div class="grow">
-            <div class="proj-name">${a.name} ${a.id === r.meId ? '<span class="who-chip">当前登录</span>' : ''}
-              <span class="badge-trip ${a.role === 'admin' ? 'st-today' : 'st-open'}" style="margin-left:4px">${a.role === 'admin' ? '管理员' : '代理人'}</span></div>
-            <div class="quota-text"><span>邀请码 ${a.code}${a.phone ? ' · ' + a.phone : ''}</span><span></span></div>
-          </div>
-        </div>
-        <div class="ag-actions">
-          <button class="mini-btn" data-act="edit">编辑</button>
-          <button class="mini-btn danger" data-act="remove" ${a.id === r.meId ? 'disabled' : ''}>移除</button>
-        </div>`;
-      el.querySelector('[data-act=edit]').onclick = () => openAccModal(a);
-      el.querySelector('[data-act=remove]').onclick = async () => {
-        if (!confirm(`移除后「${a.name}」将无法用邀请码登录${a.phone ? '，手机号恢复客户身份' : ''}。确认移除？`)) return;
-        const res = await Api.removeAgent(a.id);
-        if (!res.ok) return toast(res.msg);
-        toast('已移除');
-        loadAccounts();
-      };
-      $('#acc-agents').appendChild(el);
-    });
-    // 客户
-    $('#acc-customers').innerHTML = '';
-    $('#acc-empty').style.display = r.customers.length ? 'none' : '';
-    r.customers.forEach(u => {
-      const el = document.createElement('div');
-      el.className = 'card';
-      el.innerHTML = `
-        <div class="ag-card-head">
-          <div class="grow">
-            <div class="proj-name">${u.name || '未填写姓名'} ${u.asAgent ? '<span class="who-chip">已提升为代理人</span>' : ''}</div>
-            <div class="quota-text"><span>${u.phone}${u.idCard ? ' · ' + u.idCard.replace(/(\d{4})\d+(\d{4})/, '$1****$2') : ''}</span><span>${u.resvCount} 个预约 · 最近 ${fmtTime(u.lastActive)}</span></div>
-          </div>
-        </div>
-        <div class="ag-actions">
-          <button class="mini-btn" data-act="edit">编辑档案</button>
-          ${u.asAgent ? '' : '<button class="mini-btn solid" data-act="promote">提升为代理人</button>'}
-        </div>`;
-      el.querySelector('[data-act=edit]').onclick = () => openCustModal(u);
-      el.querySelector('[data-act=promote]')?.addEventListener('click', async () => {
-        if (!confirm(`确认将「${u.name || u.phone}」提升为代理人？将自动生成邀请码。`)) return;
-        const res = await Api.promoteCustomer(u.phone);
-        if (!res.ok) return toast(res.msg);
-        $('#acc-code-text').textContent = `「${res.name}」的代理人邀请码：${res.code}（请线下告知）`;
-        $('#acc-code-modal').style.display = '';
-        loadAccounts();
-      });
-      $('#acc-customers').appendChild(el);
-    });
-  }
-
-  $('#acc-code-close').onclick = () => { $('#acc-code-modal').style.display = 'none'; };
-
-  function openAccModal(a) {
-    accEditing = a || null;
-    $('#am-title').textContent = a ? '编辑账户' : '新增代理人';
-    $('#am-name').value = a?.name || '';
-    $('#am-code').value = a?.code || '';
-    $('#am-role').value = a?.role || 'agent';
-    $('#am-phone').value = a?.phone || '';
-    $('#acc-modal').style.display = '';
-  }
-  $('#acc-add').onclick = () => openAccModal(null);
-  $('#am-cancel').onclick = () => { $('#acc-modal').style.display = 'none'; };
-  $('#am-save').onclick = async () => {
-    const res = await Api.saveAgentAccount({
-      id: accEditing?.id, name: $('#am-name').value, code: $('#am-code').value.trim(),
-      role: $('#am-role').value, phone: $('#am-phone').value.trim(),
-    });
-    if (!res.ok) return toast(res.msg);
-    toast(accEditing ? '账户已更新' : '账户已新增');
-    $('#acc-modal').style.display = 'none';
-    loadAccounts();
-  };
-
-  function openCustModal(u) {
-    custEditing = u;
-    $('#cm-phone').value = u.phone;
-    $('#cm-name').value = u.name || '';
-    $('#cm-id').value = u.idCard || '';
-    $('#cust-modal').style.display = '';
-  }
-  $('#cm-cancel').onclick = () => { $('#cust-modal').style.display = 'none'; };
-  $('#cm-save').onclick = async () => {
-    const res = await Api.updateCustomer({ phone: custEditing.phone, name: $('#cm-name').value, idCard: $('#cm-id').value.trim().toUpperCase() });
-    if (!res.ok) return toast(res.msg);
-    toast('档案已更新');
-    $('#cust-modal').style.display = 'none';
-    loadAccounts();
-  };
-
   // ===== 班期状态细化 =====
   const todayStr = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
-  /**
-   * 班期显示状态（优先级从高到低）：
-   * 已关闭(手动停约) > 已结束(日期已过) > 今日发车 > 已满员(座位满) > 报名中
-   */
   function tripStatus(t) {
     const today = todayStr();
     if (t.status === 'closed') return { cls: 'st-closed', text: '已关闭', tip: '手动停止报名' };
@@ -179,7 +73,7 @@
   // ===== 汇总 + 班期列表 =====
   async function loadAll() {
     const trips = await Api.listTrips();
-    const details = await Promise.all(trips.map(t => Api.tripDetail(t.id)));
+    const details = (await Promise.all(trips.map(t => Api.tripDetail(t.id)))).filter(Boolean);
     const paxSet = new Set();
     let resvCount = 0;
     details.forEach(d => { d.pax.forEach(p => paxSet.add(p.phone)); d.stats.forEach(s => resvCount += s.taken); });
@@ -210,13 +104,13 @@
         if (t.status === 'open' && !confirm('关闭后客户将无法预约该班期，确认关闭？')) return;
         await Api.closeTrip(t.id);
         toast(t.status === 'open' ? '已关闭报名' : '已重新开启');
-        loadAll();
+        loadAll(); loadCustomers();
       };
       $('#ag-trips').appendChild(el);
     });
   }
 
-  // ===== 新建班期（集合点自由填写） =====
+  // ===== 新建班期 =====
   $('#nt-btn').onclick = async () => {
     const date = $('#nt-date').value;
     if (!date) return toast('请选择日期');
@@ -227,7 +121,7 @@
     loadAll();
   };
 
-  // ===== 班期详情：项目统计（点击看名单）+ 乘客表 =====
+  // ===== 班期详情 + 分项目 Sheet =====
   let detailData = null;
   async function openDetail(tripId) {
     const d = await Api.tripDetail(tripId);
@@ -260,8 +154,9 @@
     });
     $('#detail-modal').style.display = '';
   }
+  $('#dm-close').onclick = () => { $('#detail-modal').style.display = 'none'; };
+  $('#detail-modal').addEventListener('click', e => { if (e.target.id === 'detail-modal') e.target.style.display = 'none'; });
 
-  // ===== 分项目名单 Sheet =====
   function openProjSheet(pid) {
     if (!detailData) return;
     const s = detailData.stats.find(x => x.id === pid);
@@ -283,16 +178,59 @@
     $('#proj-sheet').style.display = '';
   }
   $('#proj-sheet').addEventListener('click', e => { if (e.target.id === 'proj-sheet') e.target.style.display = 'none'; });
-  $('#dm-close').onclick = () => { $('#detail-modal').style.display = 'none'; };
-  $('#detail-modal').addEventListener('click', e => { if (e.target.id === 'detail-modal') e.target.style.display = 'none'; });
 
-  // ===== 项目管理 =====
+  // ===== 我的客户（代理人=自己班期的客户；管理员=全部） =====
+  let custEditing = null;
+  async function loadCustomers() {
+    const r = await Api.myCustomers();
+    if (!r.ok) return toast(r.msg);
+    $('#cust-empty').style.display = r.customers.length ? 'none' : '';
+    $('#cust-list').innerHTML = '';
+    $('#cust-hint').textContent = r.isAdmin ? `全部代理人名下客户 · 共 ${r.total} 人` : `客户信息仅您可见 · 共 ${r.total} 人`;
+    r.customers.forEach(u => {
+      const el = document.createElement('div');
+      el.className = 'card';
+      el.innerHTML = `
+        <div class="ag-card-head">
+          <div class="avatar-sm" style="width:36px;height:36px;flex:none;border-radius:50%;background:var(--blue-soft);color:var(--blue-deep);font-weight:700;display:flex;align-items:center;justify-content:center">${(u.name || '客')[0]}</div>
+          <div class="grow">
+            <div class="proj-name">${u.name || '未填写姓名'}</div>
+            <div class="quota-text"><span>${u.phone}${u.idCard ? ' · ' + u.idCard.replace(/(\d{4})\d+(\d{4})/, '$1****$2') : ''}</span><span>${u.tripCount} 个班期 · ${u.resvCount} 单</span></div>
+            <div class="who-chips">${u.projects.map(p => `<span class="who-chip">${p.split(' · ')[0]}</span>`).join('')}</div>
+          </div>
+        </div>
+        <div class="ag-actions">
+          <button class="mini-btn" data-act="edit">编辑档案</button>
+        </div>`;
+      el.querySelector('[data-act=edit]').onclick = () => openCustModal(u);
+      $('#cust-list').appendChild(el);
+    });
+  }
+  function openCustModal(u) {
+    custEditing = u;
+    $('#cm-phone').value = u.phone;
+    $('#cm-name').value = u.name || '';
+    $('#cm-id').value = u.idCard || '';
+    $('#cust-modal').style.display = '';
+  }
+  $('#cm-cancel').onclick = () => { $('#cust-modal').style.display = 'none'; };
+  $('#cm-save').onclick = async () => {
+    const res = await Api.updateMyCustomer({ phone: custEditing.phone, name: $('#cm-name').value, idCard: $('#cm-id').value.trim().toUpperCase() });
+    if (!res.ok) return toast(res.msg);
+    toast('档案已更新');
+    $('#cust-modal').style.display = 'none';
+    loadCustomers();
+  };
+
+  // ===== 项目管理（仅管理员） =====
   async function loadProjects() {
     const ps = await Api.adminProjects();
+    if (!ps.length && myRole !== 'admin') return;
     $('#ag-projects').innerHTML = '';
     ps.forEach(p => {
       const el = document.createElement('div');
       el.className = 'card' + (p.active ? '' : ' disabled');
+      const mallText = p.mall ? `${p.mall.name} · ${p.mall.price} · ${p.mall.type === 'h5' ? 'H5链接' : '小程序'}${p.mall.url ? ' ✓' : ' 未配链接'}` : '';
       el.innerHTML = `
         <div class="ag-card-head">
           <div class="proj-group ${p.group === 'B' ? 'g-b' : p.group === 'C' ? 'g-c' : p.group === 'D' ? 'g-d' : ''}">${p.group}</div>
@@ -302,6 +240,7 @@
               <span>名额 ${p.takenTotal}/${p.quota}/班 · ${p.price ? `挂号费 ¥${p.price} 线下` : '免费'}</span>
               <span>${p.takers} 人约过</span></div>
             <div class="trip-meta">${p.desc || ''}</div>
+            ${mallText ? `<div class="trip-meta" style="color:var(--warn)">🛒 ${mallText}</div>` : ''}
           </div>
           <button class="proj-toggle ${p.active ? 'on' : ''}" title="${p.active ? '上架中，点击下架' : '已下架，点击上架'}"></button>
         </div>
@@ -319,7 +258,6 @@
     });
   }
 
-  // ===== 项目新增/编辑弹层 =====
   function openProjModal(p) {
     editing = p || null;
     $('#pm-title').textContent = p ? '编辑项目' : '新增项目';
@@ -329,23 +267,28 @@
     $('#pm-price').value = p?.price ?? 0;
     $('#pm-mallname').value = p?.mall?.name || '';
     $('#pm-mallprice').value = p?.mall?.price || '';
+    $('#pm-malltype').value = p?.mall?.type || 'mini';
+    $('#pm-mallurl').value = p?.mall?.url || '';
     $('#pm-desc').value = p?.desc || '';
     $('#pm-note').value = p?.note || '';
     $('#pm-needid').checked = !!p?.needId;
     $('#pm-queue').checked = !!p?.queue;
     $('#proj-modal').style.display = '';
   }
+  let editing = null;
   $('#p-add').onclick = () => openProjModal(null);
   $('#pm-cancel').onclick = () => { $('#proj-modal').style.display = 'none'; };
   $('#pm-save').onclick = async () => {
     const mallName = $('#pm-mallname').value.trim();
-    const mallPrice = $('#pm-mallprice').value.trim();
     const res = await Api.saveProject({
       id: editing?.id, name: $('#pm-name').value, group: $('#pm-group').value,
       quota: Number($('#pm-quota').value), price: Number($('#pm-price').value) || 0,
       desc: $('#pm-desc').value.trim(), note: $('#pm-note').value.trim(),
       needId: $('#pm-needid').checked, queue: $('#pm-queue').checked,
-      mall: mallName ? { name: mallName, price: mallPrice || '价格待定' } : null,
+      mall: mallName ? {
+        name: mallName, price: $('#pm-mallprice').value.trim(),
+        type: $('#pm-malltype').value, url: $('#pm-mallurl').value.trim(),
+      } : null,
     });
     if (!res.ok) return toast(res.msg);
     toast(editing ? '项目已更新' : '项目已新增');
@@ -353,7 +296,62 @@
     loadProjects();
   };
 
-  // 自动登录（whoAmI 判断角色）
+  // ===== 账户管理（仅管理员：管理员+代理人） =====
+  let accEditing = null;
+  async function loadAccounts() {
+    const r = await Api.listAccounts();
+    if (!r.ok) return toast(r.msg);
+    $('#acc-agents').innerHTML = '';
+    r.agents.forEach(a => {
+      const el = document.createElement('div');
+      el.className = 'card';
+      el.innerHTML = `
+        <div class="ag-card-head">
+          <div class="avatar-sm" style="width:36px;height:36px;flex:none;border-radius:50%;background:var(--blue-soft);color:var(--blue-deep);font-weight:700;display:flex;align-items:center;justify-content:center">${a.name[0]}</div>
+          <div class="grow">
+            <div class="proj-name">${a.name} ${a.id === r.meId ? '<span class="who-chip">当前登录</span>' : ''}
+              <span class="badge-trip ${a.role === 'admin' ? 'st-today' : 'st-open'}" style="margin-left:4px">${a.role === 'admin' ? '管理员' : '代理人'}</span></div>
+            <div class="quota-text"><span>邀请码 ${a.code}${a.phone ? ' · ' + a.phone : ''}</span><span></span></div>
+          </div>
+        </div>
+        <div class="ag-actions">
+          <button class="mini-btn" data-act="edit">编辑</button>
+          <button class="mini-btn danger" data-act="remove" ${a.id === r.meId ? 'disabled' : ''}>移除</button>
+        </div>`;
+      el.querySelector('[data-act=edit]').onclick = () => openAccModal(a);
+      el.querySelector('[data-act=remove]').onclick = async () => {
+        if (!confirm(`移除后「${a.name}」将无法用邀请码登录，其名下班期与客户转归您。确认移除？`)) return;
+        const res = await Api.removeAgent(a.id);
+        if (!res.ok) return toast(res.msg);
+        toast('已移除');
+        loadAccounts(); loadAll(); loadCustomers();
+      };
+      $('#acc-agents').appendChild(el);
+    });
+  }
+  function openAccModal(a) {
+    accEditing = a || null;
+    $('#am-title').textContent = a ? '编辑账户' : '新增账户';
+    $('#am-name').value = a?.name || '';
+    $('#am-code').value = a?.code || '';
+    $('#am-role').value = a?.role || 'agent';
+    $('#am-phone').value = a?.phone || '';
+    $('#acc-modal').style.display = '';
+  }
+  $('#acc-add').onclick = () => openAccModal(null);
+  $('#am-cancel').onclick = () => { $('#acc-modal').style.display = 'none'; };
+  $('#am-save').onclick = async () => {
+    const res = await Api.saveAgentAccount({
+      id: accEditing?.id, name: $('#am-name').value, code: $('#am-code').value.trim(),
+      role: $('#am-role').value, phone: $('#am-phone').value.trim(),
+    });
+    if (!res.ok) return toast(res.msg);
+    toast(accEditing ? '账户已更新' : '账户已新增');
+    $('#acc-modal').style.display = 'none';
+    loadAccounts();
+  };
+
+  // 自动登录
   (async () => {
     const saved = localStorage.getItem(MockDB.AGENT_KEY);
     if (saved) {

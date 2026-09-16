@@ -9,13 +9,13 @@
 <body>
 
 <!-- 登录 -->
-<div class="wrap" id="login-view" style="padding-top:60px">
-    <div class="login-hero">
+<div class="wrap" id="login-view" style="padding-top:60px;padding-bottom:40px">
+  <div class="login-hero">
     <div class="logo" style="background:linear-gradient(150deg,#0B5FA5,#1B9AAA)">
       <span style="font-size:1.9rem">🚌</span>
     </div>
     <h1>代理人工作台</h1>
-    <p>大巴到院 · 团期 / 项目 / 账户管理</p>
+    <p>大巴到院 · 团期 / 客户 / 项目管理</p>
   </div>
   <div class="card" style="padding:22px 18px">
     <div class="field">
@@ -24,7 +24,7 @@
     </div>
     <button class="btn-step primary" id="lg-btn" style="width:100%;padding:14px">进入工作台</button>
     <p style="font-size:.74rem;color:var(--ink-3);text-align:center;margin-top:12px">
-      角色权限：管理员(账户+全部) · 代理人(班车+项目) · 客户(登录预约)
+      管理员(项目+账户) · 代理人(班车+自己的客户)
     </p>
   </div>
 </div>
@@ -49,11 +49,12 @@
 
   <div class="atabs">
     <button class="atab on" data-tab="trips">🚌 班期管理</button>
-    <button class="atab" data-tab="projects">🏥 项目管理</button>
+    <button class="atab" data-tab="customers" id="tab-customers">👥 我的客户</button>
+    <button class="atab" data-tab="projects" id="tab-projects" style="display:none">🏥 项目管理</button>
     <button class="atab" data-tab="accounts" id="tab-accounts" style="display:none">👤 账户管理</button>
   </div>
 
-  <div class="wrap">
+  <div class="wrap" style="padding-bottom:60px">
 
     <!-- ============ Tab1 班期管理 ============ -->
     <section id="tab-trips">
@@ -78,12 +79,30 @@
       </section>
     </section>
 
-    <!-- ============ Tab2 项目管理 ============ -->
+    <!-- ============ Tab2 我的客户 ============ -->
+    <section id="tab-customers" style="display:none">
+      <section class="block">
+        <div class="block-title" id="cust-title">我的客户 <span class="hint" id="cust-hint"></span></div>
+        <div id="cust-list"></div>
+        <div class="empty" id="cust-empty" style="display:none">暂无客户（客户在您创建的班期上预约后自动归入）</div>
+      </section>
+    </section>
+
+    <!-- ============ Tab3 项目管理（仅管理员） ============ -->
     <section id="tab-projects" style="display:none">
       <section class="block">
-        <div class="block-title">可预约项目 <span class="hint">开关控制客户是否可约</span></div>
+        <div class="block-title">可预约项目 <span class="hint">仅管理员可配置 · 开关控制客户可否预约</span></div>
         <div id="ag-projects"></div>
         <button class="btn-step primary" id="p-add" style="width:100%;padding:13px">＋ 新增项目</button>
+      </section>
+    </section>
+
+    <!-- ============ Tab4 账户管理（仅管理员：管理员+代理人账户） ============ -->
+    <section id="tab-accounts" style="display:none">
+      <section class="block">
+        <div class="block-title">代理人 / 管理员账户 <span class="hint">邀请码登录工作台</span></div>
+        <div id="acc-agents"></div>
+        <button class="btn-step primary" id="acc-add" style="width:100%;padding:13px">＋ 新增账户</button>
       </section>
     </section>
   </div>
@@ -102,11 +121,11 @@
   </div>
 </div>
 
-<!-- 项目编辑弹层 -->
+<!-- 项目编辑弹层（仅管理员） -->
 <div class="modal-mask" id="proj-modal" style="display:none">
   <div class="modal" style="text-align:left;max-width:380px">
     <h3 style="text-align:center" id="pm-title">新增项目</h3>
-    <div style="max-height:58vh;overflow:auto;padding:0 2px">
+    <div style="max-height:60vh;overflow:auto;padding:0 2px">
       <div class="field"><label>项目名称 <span class="req">*</span></label><input id="pm-name" placeholder="例：疼痛治疗 · 黄金雷针" maxlength="30"></div>
       <div class="field-row">
         <div class="field"><label>分组</label>
@@ -115,11 +134,16 @@
       </div>
       <div class="field-row">
         <div class="field"><label>现场费用 (¥，0=免费)</label><input id="pm-price" type="number" min="0" value="0"></div>
-        <div class="field"><label>商城卡项价格</label><input id="pm-mallprice" placeholder="例：¥4500 或留空"></div>
+        <div class="field"><label>商城卡价格</label><input id="pm-mallprice" placeholder="例：¥4500 或留空"></div>
       </div>
-      <div class="field"><label>商城卡项名称（留空=不展示）</label><input id="pm-mallname" placeholder="例：美容年卡 · 4次"></div>
       <div class="field"><label>项目介绍</label><textarea id="pm-desc" placeholder="展示给客户的介绍文案"></textarea></div>
-      <div class="field" style="margin-bottom:8px"><label>备注标签（展示在项目卡上）</label><input id="pm-note" placeholder="例：首次免费 · 免挂号 · 需身份证"></div>
+      <div class="field"><label>备注标签（展示在项目卡上）</label><input id="pm-note" placeholder="例：首次免费 · 免挂号 · 需身份证"></div>
+      <div class="field"><label>商城卡名称（留空=不展示购买入口）</label><input id="pm-mallname" placeholder="例：美容年卡 · 4次"></div>
+      <div class="field-row">
+        <div class="field"><label>购买链接类型</label>
+          <select id="pm-malltype"><option value="mini">小程序</option><option value="h5">H5 链接</option></select></div>
+        <div class="field"><label>购买链接</label><input id="pm-mallurl" placeholder="按类型填写"></div>
+      </div>
       <label class="checkbox-row"><input type="checkbox" id="pm-needid"> 需登记身份证号</label>
       <label class="checkbox-row"><input type="checkbox" id="pm-queue"> 现场排队</label>
     </div>
@@ -127,26 +151,13 @@
       <button class="btn-step" id="pm-cancel">取消</button>
       <button class="btn-step primary" id="pm-save">保存</button>
     </div>
-    <!-- ============ Tab3 账户管理（仅管理员） ============ -->
-    <section id="tab-accounts" style="display:none">
-      <section class="block">
-        <div class="block-title">代理人 / 管理员账户 <span class="hint">邀请码登录工作台</span></div>
-        <div id="acc-agents"></div>
-        <button class="btn-step primary" id="acc-add" style="width:100%;padding:13px">＋ 新增代理人</button>
-      </section>
-      <section class="block">
-        <div class="block-title">客户账户 <span class="hint">手机号验证码登录客户端</span></div>
-        <div id="acc-customers"></div>
-        <div class="empty" id="acc-empty" style="display:none">暂无客户注册（客户在 index.html 登录后自动建档）</div>
-      </section>
-    </section>
   </div>
 </div>
 
-<!-- 账户编辑弹层 -->
+<!-- 账户编辑弹层（仅管理员） -->
 <div class="modal-mask" id="acc-modal" style="display:none">
   <div class="modal" style="text-align:left;max-width:360px">
-    <h3 style="text-align:center" id="am-title">新增代理人</h3>
+    <h3 style="text-align:center" id="am-title">新增账户</h3>
     <div class="field"><label>姓名 <span class="req">*</span></label><input id="am-name" maxlength="20"></div>
     <div class="field-row">
       <div class="field"><label>邀请码 <span class="req">*</span></label><input id="am-code" maxlength="8" inputmode="numeric"></div>
@@ -162,7 +173,7 @@
   </div>
 </div>
 
-<!-- 客户档案编辑弹层 -->
+<!-- 客户档案编辑弹层（代理人维护自己客户） -->
 <div class="modal-mask" id="cust-modal" style="display:none">
   <div class="modal" style="text-align:left;max-width:360px">
     <h3 style="text-align:center">编辑客户档案</h3>
@@ -173,16 +184,6 @@
       <button class="btn-step" id="cm-cancel">取消</button>
       <button class="btn-step primary" id="cm-save">保存</button>
     </div>
-  </div>
-</div>
-
-<!-- 提升成功·邀请码弹层 -->
-<div class="modal-mask" id="acc-code-modal" style="display:none">
-  <div class="modal">
-    <div style="font-size:2.2rem">🎉</div>
-    <h3 style="margin-top:6px">已提升为代理人</h3>
-    <p id="acc-code-text" style="font-size:.95rem;font-weight:600;color:var(--blue-deep);margin-top:8px"></p>
-    <button class="btn-step primary" id="acc-code-close" style="width:100%;margin-top:16px">知道了</button>
   </div>
 </div>
 
