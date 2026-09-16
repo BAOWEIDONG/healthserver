@@ -75,7 +75,8 @@
     btn.onclick = () => {
       document.querySelectorAll('.atab').forEach(b => b.classList.toggle('on', b === btn));
       ['trips', 'customers', 'projects', 'accounts'].forEach(t => {
-        $('#tab-' + t).style.display = btn.dataset.tab === t ? '' : 'none';
+        // 内容面板用 #pane-*（区别于 atab 按钮的 #tab-*，避免 getElementById 命中按钮导致消失/空白）
+        $('#pane-' + t).style.display = btn.dataset.tab === t ? '' : 'none';
       });
       const tab = btn.dataset.tab;
       $('#pane-title').textContent =
@@ -181,9 +182,36 @@
         <div class="quota-bar"><i style="width:${pct}%"></i></div>
       </div>`;
     }).join('') || '<div class="empty">暂无开放项目</div>';
-    $('#dm-pax').innerHTML = d.pax.length
+    gFilter = 'all';
+    buildGFilter();
+    renderPax();
+    $('#dm-stats').querySelectorAll('.stat-proj').forEach(row => {
+      row.onclick = () => openProjSheet(row.dataset.pid);
+    });
+    $('#detail-modal').style.display = '';
+  }
+  $('#dm-close').onclick = () => { $('#detail-modal').style.display = 'none'; };
+  $('#detail-modal').addEventListener('click', e => { if (e.target.id === 'detail-modal') e.target.style.display = 'none'; });
+
+  // ===== 乘客名单：按预约分组(分类)切换显示 =====
+  let gFilter = 'all';
+  function buildGFilter() {
+    const groups = [...new Set(detailData.pax.flatMap(p => p.items.map(i => i.group)).filter(Boolean))].sort();
+    const chips = ['all', ...groups];
+    $('#dm-gfilter').innerHTML = '<div class="gfilter">' +
+      chips.map(g => `<button class="gchip ${g === gFilter ? 'on' : ''}" data-g="${g}">${g === 'all' ? '全部' : g + '组'}</button>`).join('') +
+      '</div>';
+    $('#dm-gfilter').querySelectorAll('.gchip').forEach(c => {
+      c.onclick = () => { gFilter = c.dataset.g; buildGFilter(); renderPax(); };
+    });
+  }
+  function renderPax() {
+    const list = gFilter === 'all' ? detailData.pax
+      : detailData.pax.filter(p => p.items.some(i => i.group === gFilter));
+    $('#dm-pax-count').textContent = list.length + '/' + detailData.pax.length + ' 人' + (gFilter !== 'all' ? ' · ' + gFilter + '组' : '');
+    $('#dm-pax').innerHTML = list.length
       ? `<table class="pax-table"><tr><th>姓名</th><th>手机号 / 身份证</th><th>预约项目</th><th>签到</th></tr>` +
-        d.pax.map(p => `<tr>
+        list.map(p => `<tr>
           <td><b>${p.name || '未填写'}</b></td>
           <td>${p.phone}<span class="idcard">${maskId(p.idCard) || ''}</span></td>
           <td>${p.items.map(i => i.name.split(' · ')[0]).map(n => `<span class="who-chip">${n}</span>`).join(' ')}</td>
@@ -192,23 +220,17 @@
                <button class="mini-btn ck-undo" data-checkin="${p.phone}">撤销</button>`
             : `<button class="mini-btn solid" data-checkin="${p.phone}">确认到场</button>`}</td>
         </tr>`).join('') + '</table>'
-      : '<div class="empty">暂无乘客</div>';
+      : '<div class="empty">该分组暂无乘客</div>';
     $('#dm-pax').querySelectorAll('[data-checkin]').forEach(b => {
       b.onclick = async () => {
-        if (b.classList.contains('ck-undo') && !confirm(`撤销「${d.pax.find(x => x.phone === b.dataset.checkin)?.name || '该客户'}」的到场签到？`)) return;
+        if (b.classList.contains('ck-undo') && !confirm(`撤销「${detailData.pax.find(x => x.phone === b.dataset.checkin)?.name || '该客户'}」的到场签到？`)) return;
         const res = await Api.checkIn(detailData.trip.id, b.dataset.checkin);
         if (!res.ok) return toast(res.msg);
         toast(res.checkedIn ? `已确认 ${res.name} 到场签到` : '已撤销签到');
         openDetail(detailData.trip.id);
       };
     });
-    $('#dm-stats').querySelectorAll('.stat-proj').forEach(row => {
-      row.onclick = () => openProjSheet(row.dataset.pid);
-    });
-    $('#detail-modal').style.display = '';
   }
-  $('#dm-close').onclick = () => { $('#detail-modal').style.display = 'none'; };
-  $('#detail-modal').addEventListener('click', e => { if (e.target.id === 'detail-modal') e.target.style.display = 'none'; });
 
   function openProjSheet(pid) {
     if (!detailData) return;

@@ -472,4 +472,9 @@ section.block { margin-top: 18px; }
 .ck-undo { margin-top: 4px; font-size: .68rem; padding: 3px 9px; color: var(--ink-3); border-color: var(--line); }
 .who-chip.cancel { background: #EDF1F5; color: var(--ink-3); text-decoration: line-through; }
 
+/* ===== 乘客名单 分组切换 ===== */
+.gfilter { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 10px; }
+.gchip { border: 1.5px solid var(--line); background: #fff; color: var(--ink-2); border-radius: 999px; padding: 5px 14px; font-size: .76rem; cursor: pointer; font-weight: 500; }
+.gchip.on { background: var(--blue); border-color: var(--blue); color: #fff; }
+
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }

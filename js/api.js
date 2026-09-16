@@ -318,10 +318,10 @@
         if (!person) { person = { name: r.name, phone: r.phone, idCard: r.idCard, items: [], checkedInAt: r.checkedInAt || null }; pax.push(person); }
         else if (r.checkedInAt) person.checkedInAt = r.checkedInAt;
         const p = d.projects.find(x => x.id === r.projectId);
-        if (p) person.items.push({ id: p.id, name: p.name, note: p.note });
+        if (p) person.items.push({ id: p.id, name: p.name, note: p.note, group: p.group });
       });
       const stats = d.projects.map(p => ({
-        id: p.id, name: p.name, quota: p.quota, active: p.active,
+        id: p.id, name: p.name, group: p.group, quota: p.quota, active: p.active,
         taken: rs.filter(r => r.projectId === p.id).length,
         who: rs.filter(r => r.projectId === p.id).map(r => r.name),
       }));
