@@ -49,7 +49,7 @@
     const phone = $('#lg-phone').value.trim();
     const res = await Api.sendCode(phone);
     if (!res.ok) return toast(res.msg);
-    toast(`演示验证码：${res.demoCode}`);
+    toast('验证码已发送，任意6位数字即可登录');
     let t = 60;
     const btn = $('#lg-send'); btn.disabled = true;
     const iv = setInterval(() => {

@@ -31,22 +31,19 @@
       if (!validPhone(phone)) return { ok: false, msg: '手机号格式不正确' };
       const d = db();
       d.codes = (d.codes || []).filter(c => c.expireAt > Date.now());
-      d.codes.push({ phone, code: String(Math.floor(1000 + Math.random() * 9000)), expireAt: Date.now() + 5 * 60 * 1000 });
+      d.codes.push({ phone, code: String(Math.floor(100000 + Math.random() * 900000)), expireAt: Date.now() + 5 * 60 * 1000 });
       persist(d);
-      return { ok: true, demoCode: d.codes[d.codes.length - 1].code };
+      return { ok: true };
     },
 
     async login(phone, code) {
       await delay(400);
+      if (!validPhone(phone)) return { ok: false, msg: '手机号格式不正确' };
+      // 演示环境：任意6位数字验证码即可登录（真实后端替换为短信校验）
+      if (!/^\d{6}$/.test(code || '')) return { ok: false, msg: '请输入6位验证码' };
       const d = db();
-      const rec = (d.codes || []).find(c => c.phone === phone && c.expireAt > Date.now());
-      if (!rec) return { ok: false, msg: '验证码已过期，请重新获取' };
-      if (rec.code !== code) return { ok: false, msg: '验证码不正确' };
-      d.codes = d.codes.filter(c => c !== rec);
-      // 已被提升为代理人的手机号不可在客户端预约登录
       const asAgent = d.agents.find(a => a.phone === phone);
       if (asAgent) return { ok: false, msg: '该手机号为代理人账号，请从代理人端登录' };
-      // 注册/登录用户档案
       if (!d.users.find(u => u.phone === phone)) d.users.push({ phone, name: '', idCard: '', role: 'customer', createdAt: Date.now() });
       persist(d);
       localStorage.setItem(MockDB.SESSION_KEY, phone);
