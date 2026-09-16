@@ -46,6 +46,21 @@
     };
   });
 
+  // ===== 班期状态细化 =====
+  const todayStr = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+  /**
+   * 班期显示状态（优先级从高到低）：
+   * 已关闭(手动停约) > 已结束(日期已过) > 今日发车 > 已满员(座位满) > 报名中
+   */
+  function tripStatus(t) {
+    const today = todayStr();
+    if (t.status === 'closed') return { cls: 'st-closed', text: '已关闭', tip: '手动停止报名' };
+    if (t.date < today) return { cls: 'st-done', text: '已结束', tip: '日期已过' };
+    if (t.date === today) return { cls: 'st-today', text: '今日发车', tip: '今天发车' };
+    if (t.leftSeats <= 0) return { cls: 'st-full', text: '已满员', tip: '40座已满，客户不可再约' };
+    return { cls: 'st-open', text: '报名中', tip: `余 ${t.leftSeats} 座` };
+  }
+
   // ===== 汇总 + 班期列表 =====
   async function loadAll() {
     const trips = await Api.listTrips();
@@ -59,15 +74,16 @@
 
     $('#ag-trips').innerHTML = '';
     [...trips].sort((a, b) => b.date.localeCompare(a.date)).forEach(t => {
+      const st = tripStatus(t);
       const el = document.createElement('div');
       el.className = 'card';
       el.innerHTML = `
         <div class="ag-card-head">
           <div class="grow">
             <div class="trip-date"><b>${fmtDate(t.date)}</b><span>${t.time}</span>
-              <span class="${t.status === 'open' ? 'badge-on' : 'badge-off'}">${t.status === 'open' ? '报名中' : '已关闭'}</span></div>
+              <span class="badge-trip ${st.cls}" title="${st.tip}">${st.text}</span></div>
             <div class="trip-meta">${t.meetup}</div>
-            <div class="quota-text"><span>已约 ${t.takenSeats}/${t.seats} 人</span><span></span></div>
+            <div class="quota-text"><span>已约 ${t.takenSeats}/${t.seats} 人 · ${st.tip}</span><span></span></div>
           </div>
         </div>
         <div class="ag-actions">
@@ -96,18 +112,24 @@
     loadAll();
   };
 
-  // ===== 班期详情：名单 + 谁约了什么 =====
+  // ===== 班期详情：项目统计（点击看名单）+ 乘客表 =====
+  let detailData = null;
   async function openDetail(tripId) {
     const d = await Api.tripDetail(tripId);
     if (!d) return;
+    detailData = d;
+    const st = tripStatus(d.trip);
     $('#dm-title').textContent = `${fmtDate(d.trip.date)} ${d.trip.time}`;
-    $('#dm-sub').textContent = `${d.trip.status === 'open' ? '报名中' : '已关闭'} · ${d.pax.length}/${d.trip.seats} 人`;
+    $('#dm-sub').textContent = `${st.text} · ${d.pax.length}/${d.trip.seats} 人 · 点击项目行查看该项目的预约名单`;
     $('#dm-stats').innerHTML = d.stats.filter(s => s.taken > 0 || s.active).map(s => {
       const pct = Math.min(100, Math.round(s.taken / s.quota * 100));
-      return `<div style="margin-bottom:10px">
-        <div class="quota-text"><span>${s.name}${s.active ? '' : '（已下架）'}</span><span>${s.taken}/${s.quota}</span></div>
+      return `<div class="stat-proj ${s.active ? '' : 'disabled'}" data-pid="${s.id}">
+        <div class="sp-head">
+          <span class="name">${s.name}${s.active ? '' : '（已下架）'}</span>
+          <span class="sp-count"><b>${s.taken}</b>/${s.quota}</span>
+          <span class="sp-arrow">›</span>
+        </div>
         <div class="quota-bar"><i style="width:${pct}%"></i></div>
-        ${s.who.length ? `<div class="who-chips">${s.who.map(w => `<span class="who-chip">${w}</span>`).join('')}</div>` : ''}
       </div>`;
     }).join('') || '<div class="empty">暂无开放项目</div>';
     $('#dm-pax').innerHTML = d.pax.length
@@ -118,8 +140,34 @@
           <td>${p.items.map(i => i.name.split(' · ')[0]).map(n => `<span class="who-chip">${n}</span>`).join(' ')}</td>
         </tr>`).join('') + '</table>'
       : '<div class="empty">暂无乘客</div>';
+    $('#dm-stats').querySelectorAll('.stat-proj').forEach(row => {
+      row.onclick = () => openProjSheet(row.dataset.pid);
+    });
     $('#detail-modal').style.display = '';
   }
+
+  // ===== 分项目名单 Sheet =====
+  function openProjSheet(pid) {
+    if (!detailData) return;
+    const s = detailData.stats.find(x => x.id === pid);
+    if (!s) return;
+    const takers = detailData.pax.filter(p => p.items.some(i => i.id === pid));
+    $('#ps-title').textContent = s.name;
+    $('#ps-sub').textContent = `${fmtDate(detailData.trip.date)} 班 · ${s.taken}/${s.quota} 已约 · ${takers.length} 人`;
+    $('#ps-body').innerHTML = takers.length
+      ? takers.map(p => `
+        <div class="sheet-pax">
+          <div class="avatar-sm">${p.name[0]}</div>
+          <div class="info">
+            <div class="nm">${p.name}</div>
+            <div class="ph">${p.phone}${p.idCard ? `<span>身份证 ${p.idCard.replace(/(\d{4})\d+(\d{4})/, '$1****$2')}</span>` : ''}</div>
+          </div>
+          <span class="who-chip">${s.taken}/${s.quota}</span>
+        </div>`).join('')
+      : '<div class="empty">该项目暂无预约</div>';
+    $('#proj-sheet').style.display = '';
+  }
+  $('#proj-sheet').addEventListener('click', e => { if (e.target.id === 'proj-sheet') e.target.style.display = 'none'; });
   $('#dm-close').onclick = () => { $('#detail-modal').style.display = 'none'; };
   $('#detail-modal').addEventListener('click', e => { if (e.target.id === 'detail-modal') e.target.style.display = 'none'; });
 
