@@ -13,8 +13,8 @@
 
 | 角色 | 登录方式 | 权限 |
 |---|---|---|
-| 管理员 | 代理人端邀请码（演示码 `0000`） | **项目配置**（含购买链接）+ **账户维护**（管理员/代理人账户增删改）+ 客户总览（全部代理人名下客户）+ 全部班期权限 |
-| 代理人 | 代理人端邀请码（演示码 `8888`） | 班期管理（新建/开关/集合点自由填写）+ **我的客户**（仅自己班期产生的客户，代理人之间相互独立）+ 名单查看 |
+| 管理员 | 代理人端手机号+验证码（演示 `13900000002`） | **项目配置**（含购买链接）+ **账户维护**（管理员/代理人账户增删改）+ 客户总览（全部代理人名下客户）+ 全部班期权限 |
+| 代理人 | 代理人端手机号+验证码（演示 `13900000001`） | 班期管理（新建/开关/集合点自由填写）+ **我的客户**（仅自己班期产生的客户，代理人之间相互独立）+ 名单查看 |
 | 客户 | 客户端手机号+验证码 | 登录预约、查看/取消自己的预约 |
 
 权限拆分要点（v4）：
@@ -23,7 +23,7 @@
 - **客户**由代理人维护（编辑姓名/身份证档案）；客户数据按班期归属 `createdBy` 隔离，跨代理不可见、不可改；管理员可总览全部
 - **账户**管理仅含管理员/代理人账户（邀请码登录），客户不作为账户维护
 
-护栏：不能移除自己、系统至少保留一个管理员、邀请码唯一、移除代理人后其班期/客户转归当前管理员、绑定代理手机号后不可在客户端登录。
+护栏：不能移除自己、系统至少保留一个管理员、账户手机号唯一且必填（即登录号）、移除代理人后其班期/客户转归当前管理员、代理人手机号不可在客户端登录。
 
 ## 购买链接（可配置）
 
@@ -58,12 +58,12 @@
 ```
 index.html / agent.html
 css/style.css
-js/mock-db.js  模拟数据（localStorage，DB key: bybus_db_v4）
+js/mock-db.js  模拟数据（localStorage，DB key: bybus_db_v5）
 js/api.js      接口层（async，模拟延迟，含角色权限守卫）
 js/client.js / js/agent.js
 ```
 
-**接真实后端**：保持 api.js 方法签名（sendCode / login / me / listTrips / listProjects / reserve / myReservations / cancelReservation / agentLogin / whoAmI / createTrip / closeTrip / tripDetail / myCustomers / updateMyCustomer / adminProjects / saveProject / toggleProject / listAccounts / saveAgentAccount / removeAgent），内部改 fetch 即可。
+**接真实后端**：保持 api.js 方法签名（sendCode / login / me / listTrips / listProjects / reserve / myReservations / cancelReservation / agentLogin(phone,code) / whoAmI / createTrip / closeTrip / tripDetail / myCustomers / updateMyCustomer / adminProjects / saveProject / toggleProject / listAccounts / saveAgentAccount / removeAgent），内部改 fetch 即可。
 
 ## 部署
 

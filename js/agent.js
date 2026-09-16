@@ -23,14 +23,32 @@
     admin: '管理员 · 项目配置 + 账户维护 + 全部权限',
   };
 
-  // ===== 登录 =====
-  $('#lg-btn').onclick = async () => {
-    const res = await Api.agentLogin($('#lg-code').value.trim());
+  // ===== 登录（手机号 + 6位验证码，同客户端交互） =====
+  let codeCd = 0;
+  $('#lg-send').onclick = async () => {
+    const phone = $('#lg-phone').value.trim();
+    const res = await Api.sendCode(phone);
     if (!res.ok) return toast(res.msg);
-    localStorage.setItem(MockDB.AGENT_KEY, res.agent.id);
-    enter(res.agent);
+    toast('验证码已发送，任意6位数字即可登录');
+    let t = 60;
+    const btn = $('#lg-send'); btn.disabled = true;
+    const iv = setInterval(() => {
+      btn.textContent = `${--t}s 后重发`;
+      if (t <= 0) { clearInterval(iv); btn.disabled = false; btn.textContent = '获取验证码'; }
+    }, 1000);
   };
   $('#lg-code').addEventListener('keydown', e => { if (e.key === 'Enter') $('#lg-btn').click(); });
+  $('#lg-btn').onclick = async () => {
+    const btn = $('#lg-btn');
+    btn.disabled = true; btn.textContent = '登录中…';
+    const res = await Api.agentLogin($('#lg-phone').value.trim(), $('#lg-code').value.trim());
+    btn.disabled = false; btn.textContent = '进入工作台';
+    if (!res.ok) return toast(res.msg);
+    localStorage.setItem(MockDB.AGENT_KEY, res.agent.id);
+    $('#lg-code').value = '';
+    enter(res.agent);
+    toast(`欢迎，${res.agent.name}`);
+  };
   $('#btn-logout').onclick = () => { localStorage.removeItem(MockDB.AGENT_KEY); location.reload(); };
 
   function enter(agent) {
@@ -312,7 +330,7 @@
           <div class="grow">
             <div class="proj-name">${a.name} ${a.id === r.meId ? '<span class="who-chip">当前登录</span>' : ''}
               <span class="badge-trip ${a.role === 'admin' ? 'st-today' : 'st-open'}" style="margin-left:4px">${a.role === 'admin' ? '管理员' : '代理人'}</span></div>
-            <div class="quota-text"><span>邀请码 ${a.code}${a.phone ? ' · ' + a.phone : ''}</span><span></span></div>
+            <div class="quota-text"><span>手机号 ${a.phone}</span><span></span></div>
           </div>
         </div>
         <div class="ag-actions">
@@ -321,7 +339,7 @@
         </div>`;
       el.querySelector('[data-act=edit]').onclick = () => openAccModal(a);
       el.querySelector('[data-act=remove]').onclick = async () => {
-        if (!confirm(`移除后「${a.name}」将无法用邀请码登录，其名下班期与客户转归您。确认移除？`)) return;
+        if (!confirm(`移除后「${a.name}」将无法用该手机号登录，其名下班期与客户转归您。确认移除？`)) return;
         const res = await Api.removeAgent(a.id);
         if (!res.ok) return toast(res.msg);
         toast('已移除');
@@ -334,17 +352,15 @@
     accEditing = a || null;
     $('#am-title').textContent = a ? '编辑账户' : '新增账户';
     $('#am-name').value = a?.name || '';
-    $('#am-code').value = a?.code || '';
-    $('#am-role').value = a?.role || 'agent';
     $('#am-phone').value = a?.phone || '';
+    $('#am-role').value = a?.role || 'agent';
     $('#acc-modal').style.display = '';
   }
   $('#acc-add').onclick = () => openAccModal(null);
   $('#am-cancel').onclick = () => { $('#acc-modal').style.display = 'none'; };
   $('#am-save').onclick = async () => {
     const res = await Api.saveAgentAccount({
-      id: accEditing?.id, name: $('#am-name').value, code: $('#am-code').value.trim(),
-      role: $('#am-role').value, phone: $('#am-phone').value.trim(),
+      id: accEditing?.id, name: $('#am-name').value, phone: $('#am-phone').value.trim(), role: $('#am-role').value,
     });
     if (!res.ok) return toast(res.msg);
     toast(accEditing ? '账户已更新' : '账户已新增');

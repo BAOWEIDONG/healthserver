@@ -5,7 +5,7 @@
  * 接真实后端时，只需替换 api.js，本文件可整体删除。
  */
 (function () {
-  const DB_KEY = 'bybus_db_v4';
+  const DB_KEY = 'bybus_db_v5';
   const SESSION_KEY = 'bybus_session'; // 客户登录手机号
   const AGENT_KEY = 'bybus_agent';    // 代理人/管理员登录 id
 
@@ -65,11 +65,11 @@
     // { phone, name, idCard, role: 'customer'|'agent', createdAt }
     users: [],
 
-    // ===== 代理人 / 管理员账户 =====
-    // { id, name, code, role: 'agent'|'admin', phone? }
+    // ===== 代理人 / 管理员账户 ===== 手机号+验证码登录
+    // { id, name, phone, role: 'agent'|'admin' }
     agents: [
-      { id: 'AG001', name: '王代理', code: '8888', role: 'agent' },
-      { id: 'AG002', name: '系统管理员', code: '0000', role: 'admin' },
+      { id: 'AG001', name: '王代理', phone: '13900000001', role: 'agent' },
+      { id: 'AG002', name: '系统管理员', phone: '13900000002', role: 'admin' },
     ],
   });
 

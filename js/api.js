@@ -171,10 +171,14 @@
     },
 
     // ================= 代理人/管理员端 =================
-    async agentLogin(code) {
-      await delay();
-      const a = db().agents.find(x => x.code === code);
-      return a ? { ok: true, agent: a } : { ok: false, msg: '邀请码不正确' };
+    /** 代理人/管理员登录：手机号 + 6位验证码（演示环境任意6位数字） */
+    async agentLogin(phone, code) {
+      await delay(400);
+      if (!validPhone(phone)) return { ok: false, msg: '手机号格式不正确' };
+      if (!/^\d{6}$/.test(code || '')) return { ok: false, msg: '请输入6位验证码' };
+      const a = db().agents.find(x => x.phone === phone);
+      if (!a) return { ok: false, msg: '该手机号未开通工作台权限，请联系管理员' };
+      return { ok: true, agent: a };
     },
 
     async whoAmI() {
@@ -352,24 +356,22 @@
       return { ok: true, agents: d.agents.map(a => ({ ...a })), meId: me.id };
     },
 
-    async saveAgentAccount({ id, name, code, role, phone }) {
+    async saveAgentAccount({ id, name, phone, role }) {
       await delay(350);
       if (!requireAdmin()) return { ok: false, msg: '仅管理员可维护账户' };
       const d = db();
       if (!name?.trim()) return { ok: false, msg: '请填写姓名' };
-      if (!/^\d{4,8}$/.test(code || '')) return { ok: false, msg: '邀请码须为4~8位数字' };
-      if (phone && !validPhone(phone)) return { ok: false, msg: '手机号格式不正确' };
-      if (d.agents.some(a => a.code === code && a.id !== id)) return { ok: false, msg: '该邀请码已被占用' };
-      if (phone && d.agents.some(a => a.phone === phone && a.id !== id)) return { ok: false, msg: '该手机号已是代理人' };
+      if (!validPhone(phone)) return { ok: false, msg: '请填写正确的11位手机号' };
+      if (d.agents.some(a => a.phone === phone && a.id !== id)) return { ok: false, msg: '该手机号已是工作台账户' };
       if (id) {
         const a = d.agents.find(x => x.id === id);
         if (!a) return { ok: false, msg: '账户不存在' };
         if (a.id === currentAgent().id && a.role === 'admin' && role !== 'admin') {
           return { ok: false, msg: '不能降级自己的管理员身份' };
         }
-        Object.assign(a, { name: name.trim(), code, role: role || a.role, phone: phone || '' });
+        Object.assign(a, { name: name.trim(), phone, role: role || a.role });
       } else {
-        d.agents.push({ id: 'AG' + String(Date.now()).slice(-6), name: name.trim(), code, role: role || 'agent', phone: phone || '' });
+        d.agents.push({ id: 'AG' + String(Date.now()).slice(-6), name: name.trim(), phone, role: role || 'agent' });
       }
       persist(d);
       return { ok: true };

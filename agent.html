@@ -19,12 +19,20 @@
   </div>
   <div class="card" style="padding:22px 18px">
     <div class="field">
-      <label>邀请码 <span class="req">*</span></label>
-      <input id="lg-code" placeholder="代理 8888 / 管理员 0000" maxlength="8">
+      <label>手机号 <span class="req">*</span></label>
+      <input id="lg-phone" type="tel" inputmode="numeric" placeholder="请输入11位手机号" maxlength="11">
+    </div>
+    <div class="field">
+      <label>验证码 <span class="req">*</span></label>
+      <div class="code-row">
+        <input id="lg-code" type="tel" inputmode="numeric" placeholder="6位验证码（任意6位数字）" maxlength="6">
+        <button class="btn-code" id="lg-send">获取验证码</button>
+      </div>
     </div>
     <button class="btn-step primary" id="lg-btn" style="width:100%;padding:14px">进入工作台</button>
-    <p style="font-size:.74rem;color:var(--ink-3);text-align:center;margin-top:12px">
-      管理员(项目+账户) · 代理人(班车+自己的客户)
+    <p style="font-size:.72rem;color:var(--ink-3);text-align:center;margin-top:12px">
+      管理员(项目+账户配置) · 代理人(班车+自己的客户)<br>
+      演示账号：代理人 13900000001 · 管理员 13900000002
     </p>
   </div>
 </div>
@@ -100,7 +108,7 @@
     <!-- ============ Tab4 账户管理（仅管理员：管理员+代理人账户） ============ -->
     <section id="tab-accounts" style="display:none">
       <section class="block">
-        <div class="block-title">代理人 / 管理员账户 <span class="hint">邀请码登录工作台</span></div>
+        <div class="block-title">代理人 / 管理员账户 <span class="hint">手机号+验证码登录工作台</span></div>
         <div id="acc-agents"></div>
         <button class="btn-step primary" id="acc-add" style="width:100%;padding:13px">＋ 新增账户</button>
       </section>
@@ -159,13 +167,10 @@
   <div class="modal" style="text-align:left;max-width:360px">
     <h3 style="text-align:center" id="am-title">新增账户</h3>
     <div class="field"><label>姓名 <span class="req">*</span></label><input id="am-name" maxlength="20"></div>
-    <div class="field-row">
-      <div class="field"><label>邀请码 <span class="req">*</span></label><input id="am-code" maxlength="8" inputmode="numeric"></div>
-      <div class="field"><label>角色</label>
-        <select id="am-role"><option value="agent">代理人</option><option value="admin">管理员</option></select></div>
-    </div>
-    <div class="field"><label>绑定手机号（可选，绑定后该手机号不可在客户端预约登录）</label>
-      <input id="am-phone" type="tel" maxlength="11" placeholder="11位手机号"></div>
+    <div class="field"><label>登录手机号 <span class="req">*</span></label>
+      <input id="am-phone" type="tel" maxlength="11" inputmode="numeric" placeholder="11位手机号，用于验证码登录"></div>
+    <div class="field" style="margin-bottom:0"><label>角色</label>
+      <select id="am-role"><option value="agent">代理人</option><option value="admin">管理员</option></select></div>
     <div class="modal-actions">
       <button class="btn-step" id="am-cancel">取消</button>
       <button class="btn-step primary" id="am-save">保存</button>
