@@ -292,6 +292,7 @@
     $('#pm-note').value = p?.note || '';
     $('#pm-needid').checked = !!p?.needId;
     $('#pm-queue').checked = !!p?.queue;
+    $('#pm-firstfree').checked = !!p?.firstFree;
     $('#proj-modal').style.display = '';
   }
   let editing = null;
@@ -303,7 +304,7 @@
       id: editing?.id, name: $('#pm-name').value, group: $('#pm-group').value,
       quota: Number($('#pm-quota').value), price: Number($('#pm-price').value) || 0,
       desc: $('#pm-desc').value.trim(), note: $('#pm-note').value.trim(),
-      needId: $('#pm-needid').checked, queue: $('#pm-queue').checked,
+      needId: $('#pm-needid').checked, queue: $('#pm-queue').checked, firstFree: $('#pm-firstfree').checked,
       mall: mallName ? {
         name: mallName, price: $('#pm-mallprice').value.trim(),
         type: $('#pm-malltype').value, url: $('#pm-mallurl').value.trim(),

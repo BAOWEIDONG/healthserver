@@ -40,7 +40,6 @@
     $('#bar-info').innerHTML = `<b>${b}</b>${s ? `<span class="bar-sub">${s}</span>` : ''}`;
     $('#btn-prev').textContent = state.step === 1 ? '我的预约' : '上一步';
     $('#btn-next').textContent = state.step === 3 ? '确认预约' : '下一步';
-    $('#btn-next').disabled = (state.step === 2 && !state.sel.size);
     bar().style.display = '';
   }
   function setStep(n) {
@@ -125,6 +124,7 @@
     setStep(state.step - 1);
   };
   $('#btn-next').onclick = () => {
+    if (state.step === 1 && !state.tripId) return toast('请先选择一个班车班期');
     if (state.step === 2 && !state.sel.size) return toast('请至少选择 1 个项目');
     if (state.step < 3) return setStep(state.step + 1);
     openConfirm();
@@ -139,12 +139,17 @@
     open.forEach(t => {
       const full = t.leftSeats <= 0;
       const el = document.createElement('div');
-      el.className = 'card' + (full ? ' disabled' : '');
+      el.className = 'card' + (full ? ' disabled' : '') + (t.id === state.tripId ? ' sel' : '');
       el.innerHTML = `
-        <div class="trip-date"><b>${fmtDate(t.date)}</b><span>${t.time} 发车</span>
-          <span class="seat-pill ${full ? 'full' : ''}">${full ? '已满员' : `余 ${t.leftSeats} 座`}</span></div>
-        <div class="trip-meta">${t.meetup}</div>
-        <div class="quota-text"><span>已约 ${t.takenSeats}/${t.seats} 人</span><span></span></div>`;
+        <div class="trip-pick-row">
+          <div class="grow">
+            <div class="trip-date"><b>${fmtDate(t.date)}</b><span>${t.time} 发车</span></div>
+            <div class="trip-meta">${t.meetup}</div>
+            <div class="quota-text"><span>已约 ${t.takenSeats}/${t.seats} 人</span><span></span></div>
+          </div>
+          <span class="pick-mark radio" title="${full ? '已满员' : '选择该班期'}"></span>
+        </div>
+        ${full ? '' : '<div class="pick-hint">点击选择该班期</div>'}`;
       if (!full) el.onclick = () => chooseTrip(t.id);
       $('#trip-list').appendChild(el);
     });

@@ -254,12 +254,12 @@
         if (!old) return { ok: false, msg: '项目不存在' };
         const used = d.reservations.filter(r => r.projectId === p.id).length;
         if (quota < used) return { ok: false, msg: `已有 ${used} 人预约，名额不能小于已约人数` };
-        Object.assign(old, { name: p.name.trim(), group: p.group || 'A', desc: p.desc || '', quota, price: Number(p.price) || 0, note: p.note || '', needId: !!p.needId, queue: !!p.queue, mall });
+        Object.assign(old, { name: p.name.trim(), group: p.group || 'A', desc: p.desc || '', quota, price: Number(p.price) || 0, note: p.note || '', needId: !!p.needId, queue: !!p.queue, firstFree: !!p.firstFree, mall });
       } else {
         d.projects.push({
           id: 'P' + (Date.now() % 100000), name: p.name.trim(), group: p.group || 'A',
           desc: p.desc || '', quota, price: Number(p.price) || 0, note: p.note || '',
-          needId: !!p.needId, queue: !!p.queue, mall, active: true,
+          needId: !!p.needId, queue: !!p.queue, firstFree: !!p.firstFree, mall, active: true,
         });
       }
       persist(d);
