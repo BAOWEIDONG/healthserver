@@ -9,20 +9,22 @@
 <body>
 
 <!-- 登录 -->
-<div class="wrap" id="login-view" style="padding-top:56px;max-width:400px">
-  <div class="card" style="padding:26px 20px">
-    <div style="text-align:center;margin-bottom:18px">
-      <div style="font-size:2.2rem">🚌</div>
-      <h2 style="font-size:1.2rem">代理人工作台</h2>
-      <p style="font-size:.82rem;color:var(--ink-3);margin-top:4px">大巴到院 · 团期与名单管理</p>
+<div class="wrap" id="login-view" style="padding-top:60px">
+  <div class="login-hero">
+    <div class="logo" style="background:linear-gradient(150deg,#0B5FA5,#1B9AAA)">
+      <span style="font-size:1.9rem">🚌</span>
     </div>
+    <h1>代理人工作台</h1>
+    <p>大巴到院 · 团期 / 项目 / 名单管理</p>
+  </div>
+  <div class="card" style="padding:22px 18px">
     <div class="field">
       <label>邀请码 <span class="req">*</span></label>
       <input id="lg-code" placeholder="演示邀请码：8888" maxlength="8">
     </div>
-    <button class="btn-primary" id="lg-btn">进入工作台</button>
-    <p style="font-size:.76rem;color:var(--ink-3);text-align:center;margin-top:14px">
-      客户端入口：让客户扫码打开 index.html（index 页面）
+    <button class="btn-step primary" id="lg-btn" style="width:100%;padding:14px">进入工作台</button>
+    <p style="font-size:.74rem;color:var(--ink-3);text-align:center;margin-top:12px">
+      客户端入口：index.html（客户扫码进入）
     </p>
   </div>
 </div>
@@ -33,55 +35,94 @@
   <div class="agent-header">
     <div class="who">
       <h2 id="who-name">代理人工作台</h2>
-      <button class="mini-btn" id="btn-logout" style="background:rgba(255,255,255,.14);border-color:transparent;color:#fff">退出</button>
+      <button class="mini-btn" id="btn-logout" style="background:rgba(255,255,255,.15);border-color:transparent;color:#fff">退出</button>
     </div>
     <div class="stat-grid">
       <div class="stat-cell"><b id="st-trips">0</b><span>班期总数</span></div>
-      <div class="stat-cell"><b id="st-pax">0</b><span>累计到院人次</span></div>
+      <div class="stat-cell"><b id="st-pax">0</b><span>累计到院人数</span></div>
       <div class="stat-cell"><b id="st-resv">0</b><span>项目预约单</span></div>
     </div>
   </div>
 
+  <div class="atabs">
+    <button class="atab on" data-tab="trips">🚌 班期管理</button>
+    <button class="atab" data-tab="projects">🏥 项目管理</button>
+  </div>
+
   <div class="wrap">
 
-    <!-- 新建班期 -->
-    <section class="block">
-      <div class="block-title">新建班期 <span class="hint">每周最多 2 班 · 40座/班</span></div>
-      <div class="card">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-          <div class="field"><label>日期 <span class="req">*</span></label><input id="nt-date" type="date"></div>
-          <div class="field"><label>发车时间</label><input id="nt-time" type="time" value="08:30"></div>
+    <!-- ============ Tab1 班期管理 ============ -->
+    <section id="tab-trips">
+      <section class="block">
+        <div class="block-title">新建班期 <span class="hint">每周最多 2 班 · 40座/班</span></div>
+        <div class="card">
+          <div class="field-row">
+            <div class="field"><label>日期 <span class="req">*</span></label><input id="nt-date" type="date"></div>
+            <div class="field"><label>发车时间</label><input id="nt-time" type="time" value="08:30"></div>
+          </div>
+          <div class="field">
+            <label>集合点（可写详细地址 / 乘车说明）</label>
+            <textarea id="nt-meetup" placeholder="例：国贸地铁B口出，向东100米中环广场北门，大巴车牌京A12345，联系人王代理 138xxxx"></textarea>
+          </div>
+          <button class="btn-step primary" id="nt-btn" style="width:100%;padding:13px">创建班期</button>
         </div>
-        <div class="field">
-          <label>集合点</label>
-          <select id="nt-meetup">
-            <option>国贸集合点 · 大巴车</option>
-            <option>西单集合点 · 大巴车</option>
-            <option>望京集合点 · 大巴车</option>
-          </select>
-        </div>
-        <button class="btn-primary" id="nt-btn" style="padding:11px">创建班期</button>
-      </div>
+      </section>
+
+      <section class="block">
+        <div class="block-title">班期与名单</div>
+        <div id="ag-trips"></div>
+      </section>
     </section>
 
-    <!-- 班期列表 -->
-    <section class="block">
-      <div class="block-title">班期与名单</div>
-      <div id="ag-trips"></div>
+    <!-- ============ Tab2 项目管理 ============ -->
+    <section id="tab-projects" style="display:none">
+      <section class="block">
+        <div class="block-title">可预约项目 <span class="hint">开关控制客户是否可约</span></div>
+        <div id="ag-projects"></div>
+        <button class="btn-step primary" id="p-add" style="width:100%;padding:13px">＋ 新增项目</button>
+      </section>
     </section>
   </div>
 </div>
 
 <!-- 班期详情弹层 -->
 <div class="modal-mask" id="detail-modal" style="display:none">
-  <div class="modal" style="text-align:left;max-height:82vh;overflow:auto">
-    <h3 id="dm-title" style="text-align:center"></h3>
-    <p style="text-align:center;font-size:.78rem;color:var(--ink-3);margin-bottom:10px" id="dm-sub"></p>
-    <div class="block-title" style="font-size:.9rem">项目预约统计</div>
+  <div class="modal" style="text-align:left;max-width:380px">
+    <h3 style="text-align:center" id="dm-title"></h3>
+    <p style="text-align:center;font-size:.76rem;color:var(--ink-3);margin-bottom:12px" id="dm-sub"></p>
+    <div class="block-title" style="font-size:.88rem">项目预约统计</div>
     <div id="dm-stats"></div>
-    <div class="block-title" style="font-size:.9rem;margin-top:12px">乘客名单</div>
+    <div class="block-title" style="font-size:.88rem;margin-top:12px">乘客名单</div>
     <div id="dm-pax"></div>
-    <button class="btn-primary" id="dm-close" style="margin-top:14px">关闭</button>
+    <button class="btn-step primary" id="dm-close" style="width:100%;margin-top:14px">关闭</button>
+  </div>
+</div>
+
+<!-- 项目编辑弹层 -->
+<div class="modal-mask" id="proj-modal" style="display:none">
+  <div class="modal" style="text-align:left;max-width:380px">
+    <h3 style="text-align:center" id="pm-title">新增项目</h3>
+    <div style="max-height:58vh;overflow:auto;padding:0 2px">
+      <div class="field"><label>项目名称 <span class="req">*</span></label><input id="pm-name" placeholder="例：疼痛治疗 · 黄金雷针" maxlength="30"></div>
+      <div class="field-row">
+        <div class="field"><label>分组</label>
+          <select id="pm-group"><option>A</option><option>B</option><option>C</option><option>D</option></select></div>
+        <div class="field"><label>单班名额 <span class="req">*</span></label><input id="pm-quota" type="number" min="1" placeholder="30"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>现场费用 (¥，0=免费)</label><input id="pm-price" type="number" min="0" value="0"></div>
+        <div class="field"><label>商城卡项价格</label><input id="pm-mallprice" placeholder="例：¥4500 或留空"></div>
+      </div>
+      <div class="field"><label>商城卡项名称（留空=不展示）</label><input id="pm-mallname" placeholder="例：美容年卡 · 4次"></div>
+      <div class="field"><label>项目介绍</label><textarea id="pm-desc" placeholder="展示给客户的介绍文案"></textarea></div>
+      <div class="field" style="margin-bottom:8px"><label>备注标签（展示在项目卡上）</label><input id="pm-note" placeholder="例：首次免费 · 免挂号 · 需身份证"></div>
+      <label class="checkbox-row"><input type="checkbox" id="pm-needid"> 需登记身份证号</label>
+      <label class="checkbox-row"><input type="checkbox" id="pm-queue"> 现场排队</label>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-step" id="pm-cancel">取消</button>
+      <button class="btn-step primary" id="pm-save">保存</button>
+    </div>
   </div>
 </div>
 

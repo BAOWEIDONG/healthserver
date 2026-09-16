@@ -8,87 +8,194 @@
 </head>
 <body>
 
-<div class="hero">
-  <div class="brand">
-    <svg class="cross" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="18" rx="1.5" fill="#fff"/><rect x="3" y="9" width="18" height="6" rx="1.5" fill="#fff"/></svg>
-    <div>
-      <div class="kicker">北大国际医院 · 到院服务</div>
-      <h1>大巴到院 · 医疗项目预约</h1>
+<!-- ================= 登录页 ================= -->
+<div id="view-login" style="display:none">
+  <div class="login-hero">
+    <div class="logo">
+      <svg width="34" height="34" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="18" rx="1.5" fill="#fff"/><rect x="3" y="9" width="18" height="6" rx="1.5" fill="#fff"/></svg>
     </div>
+    <h1>北大国际医院 · 大巴到院</h1>
+    <p>代理人带团乘大巴直达医院 · 六大医疗项目预约</p>
   </div>
-  <p class="sub">乘大巴直达医院，六大医疗项目任您预约。先选班车班期，再选体验项目。</p>
-</div>
-
-<div class="steps">
-  <div class="step on" id="step1">1 选班车</div>
-  <div class="step" id="step2">2 选项目</div>
-  <div class="step" id="step3">3 填信息</div>
-</div>
-
-<div class="wrap">
-
-  <!-- 视图1：选班车 -->
-  <section class="block" id="view-trips">
-    <div class="block-title">选择班车班期 <span class="hint">每周 1~2 班 · 40座/班</span></div>
-    <div id="trip-list"></div>
-    <div class="empty" id="trip-empty" style="display:none">暂无可约班期，请联系您的代理人</div>
-  </section>
-
-  <!-- 视图2：选项目 -->
-  <section class="block" id="view-projects" style="display:none">
-    <div class="block-title">选择体验项目 <span class="hint" id="proj-trip-hint"></span></div>
-    <div id="proj-list"></div>
-    <button class="btn-primary" id="btn-to-form">下一步 · 填写信息</button>
-    <button class="btn-ghost" id="btn-back-trips" style="margin-top:10px">← 重选班车</button>
-  </section>
-
-  <!-- 视图3：信息表单 -->
-  <section class="block" id="view-form" style="display:none">
-    <div class="card">
-      <div class="block-title" style="margin-bottom:4px">预约人信息</div>
-      <div class="field">
-        <label>姓名 <span class="req">*</span></label>
-        <input id="f-name" placeholder="与身份证一致" maxlength="20">
-      </div>
+  <div class="wrap" style="padding-bottom:40px">
+    <div class="card" style="padding:22px 18px">
       <div class="field">
         <label>手机号 <span class="req">*</span></label>
-        <input id="f-phone" type="tel" inputmode="numeric" placeholder="11位手机号" maxlength="11">
+        <input id="lg-phone" type="tel" inputmode="numeric" placeholder="请输入11位手机号" maxlength="11">
       </div>
-      <div class="field" id="f-id-wrap">
-        <label>身份证号 <span class="req" id="f-id-req" style="display:none">*</span> <span style="color:var(--ink-3);font-size:.75rem">(选择黄金雷针项目必填)</span></label>
-        <input id="f-id" placeholder="18位身份证号" maxlength="18">
+      <div class="field">
+        <label>验证码 <span class="req">*</span></label>
+        <div class="code-row">
+          <input id="lg-code" type="tel" inputmode="numeric" placeholder="4位验证码" maxlength="4">
+          <button class="btn-code" id="lg-send">获取验证码</button>
+        </div>
       </div>
+      <button class="btn-step primary" id="lg-submit" style="width:100%;padding:14px">登录 / 注册</button>
+      <p style="font-size:.72rem;color:var(--ink-3);text-align:center;margin-top:12px">
+        未注册手机号验证通过后自动注册
+      </p>
     </div>
-    <button class="btn-primary" id="btn-submit">确认预约</button>
-    <button class="btn-ghost" id="btn-back-projects" style="margin-top:10px">← 重选项目</button>
-  </section>
+  </div>
+</div>
+
+<!-- ================= 登录后主界面 ================= -->
+<div id="view-app" style="display:none">
+
+  <div class="hero">
+    <div class="kicker">
+      <svg width="14" height="14" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="18" rx="1.5" fill="#fff" opacity=".85"/><rect x="3" y="9" width="18" height="6" rx="1.5" fill="#fff" opacity=".85"/></svg>
+      北大国际医院 · 到院服务
+    </div>
+    <h1>大巴到院 · 医疗项目预约</h1>
+    <p class="sub">先选班车班期，再选体验项目。乘大巴直达医院。</p>
+    <div class="user-chip" id="user-chip">
+      <span class="avatar" id="uc-avatar">客</span>
+      <span id="uc-name">我的</span>
+    </div>
+  </div>
+
+  <div class="steps">
+    <div class="step on" id="step1"><span class="dot">1</span><br>选班车</div>
+    <div class="step" id="step2"><span class="dot">2</span><br>选项目</div>
+    <div class="step" id="step3"><span class="dot">3</span><br>填信息</div>
+  </div>
+
+  <div class="wrap">
+
+    <!-- 视图1：选班车 -->
+    <section class="block" id="view-trips">
+      <div class="block-title">选择班车班期 <span class="hint">每周 1~2 班 · 40座/班</span></div>
+      <div id="trip-list"><div class="loader">加载中…</div></div>
+      <div class="empty" id="trip-empty" style="display:none">暂无可约班期，请联系您的代理人</div>
+    </section>
+
+    <!-- 视图2：选项目 -->
+    <section class="block" id="view-projects" style="display:none">
+      <div class="block-title">选择体验项目 <span class="hint" id="proj-trip-hint"></span></div>
+      <div id="proj-list"><div class="loader">加载中…</div></div>
+    </section>
+
+    <!-- 视图3：填信息 -->
+    <section class="block" id="view-form" style="display:none">
+      <div class="block-title">预约人信息</div>
+      <div class="card">
+        <div class="field">
+          <label>姓名 <span class="req">*</span></label>
+          <input id="f-name" placeholder="与身份证一致" maxlength="20">
+        </div>
+        <div class="field">
+          <label>手机号</label>
+          <input id="f-phone" disabled style="background:var(--bg);color:var(--ink-2)">
+        </div>
+        <div class="field" id="f-id-wrap" style="margin-bottom:0">
+          <label>身份证号 <span class="req" id="f-id-req" style="display:none">*</span> <span style="color:var(--ink-3);font-size:.74rem">(含黄金雷针项目必填)</span></label>
+          <input id="f-id" placeholder="18位身份证号" maxlength="18">
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- 悬浮底部操作栏 -->
+  <div class="actionbar" id="actionbar" style="display:none">
+    <div class="bar-info" id="bar-info"></div>
+    <button class="btn-step" id="btn-prev">上一步</button>
+    <button class="btn-step primary" id="btn-next">下一步</button>
+  </div>
 
   <!-- 我的预约 -->
   <section class="block" id="view-mine" style="display:none">
-    <div class="block-title">我的预约</div>
-    <div class="card" style="padding:12px">
-      <div class="field" style="margin-bottom:10px">
-        <label>手机号查询</label>
-        <input id="q-phone" type="tel" inputmode="numeric" placeholder="输入预约时填写的手机号" maxlength="11">
-      </div>
-      <button class="btn-primary" id="btn-query" style="padding:10px">查询我的预约</button>
+    <div class="wrap" style="padding:0 0 110px">
+      <div class="block-title" style="padding:0 16px">我的预约</div>
+      <div id="mine-list" style="padding:0 16px"></div>
     </div>
-    <div id="mine-list"></div>
-    <div class="empty" id="mine-empty" style="display:none">该手机号暂无预约记录</div>
   </section>
+
 </div>
 
-<!-- 成功弹窗 -->
-<div class="modal-mask" id="ok-modal" style="display:none">
-  <div class="modal">
-    <div style="font-size:2.4rem;line-height:1">✅</div>
-    <h3 style="margin-top:8px">预约成功</h3>
-    <p id="ok-text"></p>
-    <button class="btn-primary" id="ok-close">好的</button>
+<!-- ================= 预约成功页 ================= -->
+<div id="view-success" class="success-page" style="display:none">
+  <div class="success-ring">
+    <svg class="okmark" viewBox="0 0 52 52"><circle cx="26" cy="26" r="24" fill="none" stroke="#1E7D4F" stroke-width="3"/><path d="M15 27l8 8 15-16" fill="none" stroke="#1E7D4F" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </div>
+  <h2>预约成功</h2>
+  <p class="sub">请凭手机号按时到集合点上车</p>
+  <div class="wrap">
+    <div class="card success-card">
+      <div class="sc-title">班车班期</div>
+      <div class="sc-trip" id="sc-trip"></div>
+      <div class="sc-title" style="margin-top:14px">预约项目</div>
+      <div class="sc-items" id="sc-items"></div>
+      <div class="success-tips" id="sc-tips"></div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:16px">
+      <button class="btn-step" id="sc-mine" style="flex:1">查看我的预约</button>
+      <button class="btn-step primary" id="sc-home" style="flex:1">返回首页</button>
+    </div>
   </div>
 </div>
 
-<div class="tabbar">
+<!-- ================= 预约详情页 ================= -->
+<div id="view-detail" class="detail-page" style="display:none">
+  <div class="dp-hero">
+    <div class="k">班车班期</div>
+    <div class="v" id="dp-trip"></div>
+  </div>
+  <div class="wrap">
+    <section class="block">
+      <div class="block-title">预约项目</div>
+      <div class="card" id="dp-items"></div>
+    </section>
+    <section class="block" id="dp-person-block">
+      <div class="block-title">预约人</div>
+      <div class="card" id="dp-person"></div>
+    </section>
+    <div class="danger-zone">
+      <button class="btn-danger" id="dp-cancel">取消本班期全部预约</button>
+    </div>
+    <div style="height:24px"></div>
+    <button class="btn-step" id="dp-back" style="width:100%">← 返回我的预约</button>
+    <div style="height:30px"></div>
+  </div>
+</div>
+
+<!-- ================= 用户信息弹窗 ================= -->
+<div class="modal-mask" id="me-modal" style="display:none">
+  <div class="modal">
+    <h3>我的</h3>
+    <p id="me-phone" style="margin-bottom:4px"></p>
+    <div class="modal-actions">
+      <button class="btn-step" id="me-cancel">关闭</button>
+      <button class="btn-step primary" id="me-logout">退出登录</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= 提交确认弹窗 ================= -->
+<div class="modal-mask" id="confirm-modal" style="display:none">
+  <div class="modal">
+    <h3>确认预约信息</h3>
+    <p style="font-size:.78rem">提交后名额即时锁定，请核对无误</p>
+    <div class="modal-body"><div class="confirm-list" id="cf-list"></div></div>
+    <div class="modal-actions">
+      <button class="btn-step" id="cf-no">返回修改</button>
+      <button class="btn-step primary" id="cf-yes">确认提交</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= 取消确认弹窗 ================= -->
+<div class="modal-mask" id="cancel-modal" style="display:none">
+  <div class="modal">
+    <h3>取消预约</h3>
+    <p id="cc-text"></p>
+    <div class="modal-actions">
+      <button class="btn-step" id="cc-no">再想想</button>
+      <button class="btn-step primary" id="cc-yes" style="background:#C0392B;box-shadow:0 5px 16px rgba(192,57,43,.3)">确认取消</button>
+    </div>
+  </div>
+</div>
+
+<div class="tabbar" id="tabbar" style="display:none">
   <button class="on" data-tab="book"><span class="ico">🚌</span>预约</button>
   <button data-tab="mine"><span class="ico">📋</span>我的预约</button>
 </div>

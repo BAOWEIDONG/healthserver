@@ -1,62 +1,53 @@
 # healthserver — 北大国际医院 · 大巴到院预约 H5
 
-寿险代理人带客到院场景：代理人发团（大巴 40 座/班，每周 1~2 班），客户扫码进入 H5，先约车、再选医疗项目（分组、名额控制）。
+寿险代理人带客到院场景：代理人发团（大巴 40 座/班，每周 1~2 班），客户手机号验证码登录后，先约车、再选医疗项目（分组、名额控制）。
 
 ## 页面
 
 | 入口 | 文件 | 说明 |
 |---|---|---|
-| 客户端 | `index.html` | 扫码直接进入：选班车 → 选项目 → 填信息；底部「我的预约」按手机号查询 |
-| 代理人端 | `agent.html` | 邀请码登录（演示码 `8888`）：新建班期（每周≤2班）、乘客名单、项目预约统计、关闭/开启报名 |
+| 客户端 | `index.html` | 手机号+验证码登录（演示环境验证码以弹窗提示）→ 选班车 → 选项目 → 填信息 → 确认弹窗 → 预约成功页；「我的预约」按登录态展示，可看详情、取消 |
+| 代理人端 | `agent.html` | 邀请码登录（演示码 `8888`）；两个 Tab：班期管理（新建班期、集合点自由填写详细地址、查看名单、开关报名）+ 项目管理（自定义项目增删改、名额/价格/标签/商城卡配置、上下架） |
 
-## 医疗项目（6 项，分组）
+## 客户端流程
 
-- A 疼痛治疗·黄金雷针 — 首次免费、免挂号、需身份证+手机号、30 名额/班、现场排队；可购月卡 8 次（跳北医商城小程序）
-- B 全科问诊·体检报告解读 — 免费、4 个诊室、30 名额/班、医保结算走线下
-- B 心肺功能测试 — 医保结算走线下（演示默认 20 名额/班）
-- C 美容皮肤检测 — 免费、10 名额/班；可购美容年卡 4 次 ¥4500（跳商城）
-- C 中医坐诊 — 挂号费 ¥200 线下支付
-- D 到院参观 — 免费、10 名额/班
+1. **登录**：手机号 + 验证码（60s 倒计时防重发），未注册自动注册
+2. **选班车**：每周 1~2 班、40 座/班、余座实时；集合点详细说明完整展示
+3. **选项目**：仅显示上架项目；名额进度条（低于15%橙色预警）；满额置灰
+4. **填信息**：姓名/身份证自动预填（取自上次预约档案）；需身份证项目红星提示
+5. **确认弹窗**：提交前汇总班车/集合点/项目/费用，二次确认
+6. **成功页**：绿圈动效 + 班期/项目/注意事项完整回显
+7. **我的预约**：按班期分组的卡片 → 详情页（含身份证脱敏、商城购买入口、提交时间）→ 可取消（释放名额）
+8. 底部「上一步/下一步」悬浮操作栏，随步骤显示当前进度提示
+
+## 代理人端
+
+- **班期管理**：新建（日期+时间+集合点自由填写，可写车牌/联系人等细节）、每周≤2班、同日去重、关闭/开启报名（二次确认）
+- **项目管理**：新增/编辑项目（名称、分组、单班名额、现场费用、商城卡名称与价格、介绍、备注标签、需身份证、现场排队），名额不能小于已约人数；上架/下架开关（下架二次提示影响）
+- **班期名单**：乘客表（姓名/手机/身份证/所约项目）+ 每项目预约统计与预约人名单
 
 ## 结构
 
 ```
-index.html   客户端
-agent.html   代理人端
+index.html / agent.html
 css/style.css
-js/mock-db.js  模拟数据（localStorage 持久化）
-js/api.js      接口层（全部 async，模拟 200~400ms 延迟）
-js/client.js   客户端逻辑
-js/agent.js    代理人端逻辑
+js/mock-db.js  模拟数据（localStorage，DB key: bybus_db_v2）
+js/api.js      接口层（async，模拟延迟）
+js/client.js / js/agent.js
 ```
 
-**接真实后端**：保持 api.js 的方法签名不变（listTrips / listProjects / reserve / myReservations / agentLogin / createTrip / tripDetail / closeTrip），内部改成 `fetch('/api/...')`，删除 mock-db.js 引用即可，页面代码零改动。
+**接真实后端**：保持 api.js 方法签名（sendCode / login / me / listTrips / listProjects / reserve / myReservations / cancelReservation / agentLogin / createTrip / closeTrip / adminProjects / saveProject / toggleProject / tripDetail），内部改 fetch 即可。
 
-## 部署（GitHub Pages）
+## 部署
 
-```bash
-cd healthserver
-git init
-git add -A
-git commit -m "大巴到院预约H5"
-git branch -M main
-git remote add origin https://github.com/baoweidong/healthserver.git
-git push -u origin main
-```
-
-然后 GitHub 仓库 → Settings → Pages → Source 选 `main` / root。
-上线地址：`https://baoweidong.github.io/healthserver/`
-
-客户预约入口：`https://baoweidong.github.io/healthserver/`（index.html）
-代理人入口：`https://baoweidong.github.io/healthserver/agent.html`
+已上线：https://baoweidong.github.io/healthserver/
+代理人端：https://baoweidong.github.io/healthserver/agent.html
 
 ## 演示数据
 
-首次打开自动初始化 3 个班期种子数据。要重置：控制台执行
-`localStorage.removeItem('bybus_db_v1')` 后刷新。
+重置：控制台 `localStorage.clear()` 后刷新。
 
 ## 待确认口径
 
-- 黄金雷针月卡 8 次价格（原需求只写了"¥1"，现为"价格待定"，改 `js/mock-db.js` 里 `P1.mall.price`）
-- 心肺功能测试单班名额（原需求描述不完整，暂定 20，改 `P3.quota`）
-- 中医坐诊名额暂定 15/班（改 `P5.quota`）
+- 黄金雷针月卡 8 次价格（原需求"¥1"疑截断，代理人端可自行配置）
+- 心肺测试 20 / 中医坐诊 15 / 参观 10 等名额均为初始值，代理人端可改
