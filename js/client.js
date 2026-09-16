@@ -35,9 +35,9 @@
   const bar = () => $('#actionbar');
   function updateBar() {
     // 悬浮栏内容随步骤变化
-    const info = { 1: ['第一步', '选择要乘坐的班车班期'], 2: [`${state.sel.size} 个项目已选`, '可多选，名额有限'], 3: ['最后一步', '核对信息并提交预约'] };
+    const info = { 1: ['第一步 · 选择要乘坐的班车班期', ''], 2: ['第二步 · 选项目', `${state.sel.size} 个已选 · 可多选`], 3: ['最后一步', '核对信息并提交'] };
     const [b, s] = info[state.step];
-    $('#bar-info').innerHTML = `<b>${b}</b>${s || ''}`;
+    $('#bar-info').innerHTML = `<b>${b}</b>${s ? `<span class="bar-sub">${s}</span>` : ''}`;
     $('#btn-prev').textContent = state.step === 1 ? '我的预约' : '上一步';
     $('#btn-next').textContent = state.step === 3 ? '确认预约' : '下一步';
     $('#btn-next').disabled = (state.step === 2 && !state.sel.size);
@@ -98,7 +98,8 @@
       document.querySelectorAll('.tabbar button').forEach(b => b.classList.toggle('on', b === btn));
       const mine = btn.dataset.tab === 'mine';
       bar().style.display = mine ? 'none' : '';
-      document.querySelectorAll('.steps').forEach(s => s.style.display = mine ? 'none' : '');
+      document.querySelector('.hero').style.display = mine ? 'none' : '';
+      document.querySelector('.steps').style.display = mine ? 'none' : '';
       $('#view-trips').style.display = !mine && state.step === 1 ? '' : 'none';
       $('#view-projects').style.display = !mine && state.step === 2 ? '' : 'none';
       $('#view-form').style.display = !mine && state.step === 3 ? '' : 'none';

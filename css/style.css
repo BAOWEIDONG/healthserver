@@ -138,18 +138,25 @@ section.block { margin-top: 18px; }
 .actionbar {
   position: fixed; left: 50%; transform: translateX(-50%); bottom: 54px; width: 100%; max-width: 480px;
   background: rgba(255,255,255,.94); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
-  border: 1px solid var(--line); border-radius: 18px 18px 0 0; padding: 10px 16px; z-index: 40;
-  display: flex; gap: 10px; box-shadow: 0 -6px 28px rgba(11,70,125,.12);
+  border: 1px solid var(--line); border-radius: 18px 18px 0 0; padding: 12px 16px 14px; z-index: 40;
+  flex-direction: column; gap: 9px; box-shadow: 0 -6px 28px rgba(11,70,125,.12);
 }
-.actionbar .bar-info { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; font-size: .72rem; color: var(--ink-3); line-height: 1.35; }
+.actionbar .bar-info {
+  display: flex; align-items: baseline; justify-content: center; gap: 7px;
+  font-size: .74rem; color: var(--ink-3); text-align: center;
+}
 .actionbar .bar-info b { font-size: .84rem; color: var(--ink); }
+.actionbar .bar-info .bar-sub { white-space: nowrap; }
+.bar-btns { display: flex; gap: 10px; }
+.bar-btns .btn-step { flex: 1; padding: 13px 0; }
+.bar-btns .btn-step.primary { flex: 2; }
 .btn-step {
   border: none; cursor: pointer; font-size: .92rem; font-weight: 600; border-radius: 13px; padding: 13px 22px;
   background: #fff; color: var(--ink-2); border: 1.5px solid var(--line); flex: none;
 }
 .btn-step.primary {
   background: linear-gradient(135deg, var(--blue), #1273BE); color: #fff; border: none;
-  box-shadow: 0 5px 16px rgba(11,95,165,.32); flex: 1.6;
+  box-shadow: 0 5px 16px rgba(11,95,165,.32);
 }
 .btn-step.primary[disabled] { opacity: .55; cursor: not-allowed; box-shadow: none; }
 
@@ -215,7 +222,7 @@ section.block { margin-top: 18px; }
 .success-tips { margin-top: 14px; font-size: .75rem; color: var(--ink-3); background: var(--bg); border-radius: 10px; padding: 10px 12px; text-align: left; }
 
 /* ===== 我的预约 ===== */
-#view-mine .mine-inner { max-width: 480px; margin: 0 auto; padding: 0 16px 130px; }
+#view-mine .mine-inner { max-width: 480px; margin: 0 auto; padding: 20px 16px 130px; }
 .mine-card { position: relative; }
 .mine-card .mc-head { display: flex; align-items: center; gap: 9px; }
 .mine-card .mc-date { font-size: 1.05rem; font-weight: 700; color: var(--blue-deep); }
