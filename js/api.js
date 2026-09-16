@@ -99,6 +99,9 @@
       const d = db();
       const trip = d.trips.find(t => t.id === payload.tripId && t.status === 'open');
       if (!trip) return { ok: false, msg: '班期已关闭或不存在' };
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      const tDate = new Date(trip.date.replace(/-/g, '/')); tDate.setHours(0, 0, 0, 0);
+      if (tDate < today) return { ok: false, msg: '该班期已过发车日期，无法预约' };
 
       const { name, projectIds = [] } = payload;
       if (!name?.trim()) return { ok: false, msg: '请填写姓名' };

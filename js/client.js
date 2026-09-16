@@ -127,13 +127,20 @@
     if (state.step === 1 && !state.tripId) return toast('请先选择一个班车班期');
     if (state.step === 2 && !state.sel.size) return toast('请至少选择 1 个项目');
     if (state.step < 3) return setStep(state.step + 1);
+    // 最后一步：先在前端校验姓名与身份证，再弹确认
+    if (!$('#f-name').value.trim()) return toast('请填写姓名');
+    const needId = state.projects.find(p => state.sel.has(p.id) && p.needId);
+    if (needId && !/^\d{17}[\dXx]$/.test($('#f-id').value.trim())) return toast(`「${needId.name}」需登记有效身份证号`);
     openConfirm();
   };
 
   // ================= 视图1：班车 =================
+  const todayString = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
   async function loadTrips() {
     state.trips = await Api.listTrips();
-    const open = state.trips.filter(t => t.status === 'open');
+    const today = todayString();
+    // 只展示可约且未过期的班期
+    const open = state.trips.filter(t => t.status === 'open' && t.date >= today);
     $('#trip-empty').style.display = open.length ? 'none' : '';
     $('#trip-list').innerHTML = '';
     open.forEach(t => {
@@ -145,7 +152,7 @@
           <div class="grow">
             <div class="trip-date"><b>${fmtDate(t.date)}</b><span>${t.time} 发车</span></div>
             <div class="trip-meta">${t.meetup}</div>
-            <div class="quota-text"><span>已约 ${t.takenSeats}/${t.seats} 人</span><span></span></div>
+            <div class="quota-text"><span>已约 ${t.takenSeats}/${t.seats} 人</span><span>${full ? '已满员' : `余 ${t.leftSeats} 座`}</span></div>
           </div>
           <span class="pick-mark radio" title="${full ? '已满员' : '选择该班期'}"></span>
         </div>
@@ -169,6 +176,10 @@
     $('#proj-list').innerHTML = '<div class="loader">加载中…</div>';
     state.projects = await Api.listProjects(state.tripId);
     $('#proj-list').innerHTML = '';
+    if (!state.projects.length) {
+      $('#proj-list').innerHTML = '<div class="empty">该班期暂无可预约项目，请返回选择其他班期</div>';
+      return;
+    }
     state.projects.forEach(p => {
       const full = p.left <= 0;
       const el = document.createElement('div');
@@ -210,10 +221,11 @@
   }
 
   // ================= 视图3：信息 + 确认弹窗 =================
+  // 仅在字段为空时用档案回填，避免覆盖用户已手动输入的内容
   function prefillForm() {
-    $('#f-name').value = state.me.name || '';
+    if (!$('#f-name').value) $('#f-name').value = state.me.name || '';
     $('#f-phone').value = state.me.phone;
-    $('#f-id').value = state.me.idCard || '';
+    if (!$('#f-id').value) $('#f-id').value = state.me.idCard || '';
   }
   const origSetStep = setStep;
   setStep = function (n) {
