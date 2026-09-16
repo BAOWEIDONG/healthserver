@@ -12,6 +12,8 @@
 
   const validPhone = (s) => /^1\d{10}$/.test(s);
   const validIdCard = (s) => /^\d{17}[\dXx]$/.test(s);
+  /** 有效（未取消）的预约——取消记录保留在库中但不计入任何统计/名额 */
+  const active = (r) => r.status !== 'cancelled';
 
   function currentAgent() {
     const id = localStorage.getItem(MockDB.AGENT_KEY);
@@ -65,7 +67,7 @@
       await delay();
       const d = db();
       return d.trips.map(t => {
-        const pax = new Set(d.reservations.filter(r => r.tripId === t.id).map(r => r.phone));
+        const pax = new Set(d.reservations.filter(r => r.tripId === t.id && active(r)).map(r => r.phone));
         return { ...t, takenSeats: pax.size, leftSeats: Math.max(0, t.seats - pax.size) };
       });
     },
@@ -78,7 +80,7 @@
       const d = db();
       const list = me.role === 'admin' ? d.trips : d.trips.filter(t => t.createdBy === me.id);
       return list.map(t => {
-        const pax = new Set(d.reservations.filter(r => r.tripId === t.id).map(r => r.phone));
+        const pax = new Set(d.reservations.filter(r => r.tripId === t.id && active(r)).map(r => r.phone));
         return { ...t, takenSeats: pax.size, leftSeats: Math.max(0, t.seats - pax.size) };
       });
     },
@@ -87,7 +89,7 @@
       await delay();
       const d = db();
       return d.projects.filter(p => p.active).map(p => {
-        const taken = d.reservations.filter(r => r.tripId === tripId && r.projectId === p.id);
+        const taken = d.reservations.filter(r => active(r) && r.tripId === tripId && r.projectId === p.id);
         return { ...p, taken: taken.length, left: Math.max(0, p.quota - taken.length) };
       });
     },
@@ -107,26 +109,26 @@
       if (!name?.trim()) return { ok: false, msg: '请填写姓名' };
       if (!projectIds.length) return { ok: false, msg: '请至少选择 1 个项目' };
 
-      const onBus = d.reservations.some(r => r.tripId === trip.id && r.phone === phone);
+      const onBus = d.reservations.some(r => active(r) && r.tripId === trip.id && r.phone === phone);
       if (!onBus) {
-        const pax = new Set(d.reservations.filter(r => r.tripId === trip.id).map(r => r.phone));
+        const pax = new Set(d.reservations.filter(r => active(r) && r.tripId === trip.id).map(r => r.phone));
         if (pax.size >= trip.seats) return { ok: false, msg: '该班车座位已满，请选择其他班期' };
       }
 
       for (const pid of projectIds) {
         const p = d.projects.find(x => x.id === pid && x.active);
         if (!p) return { ok: false, msg: '项目不存在或已下架' };
-        const mine = d.reservations.some(r => r.tripId === trip.id && r.projectId === pid && r.phone === phone);
+        const mine = d.reservations.some(r => active(r) && r.tripId === trip.id && r.projectId === pid && r.phone === phone);
         if (mine) continue;
-        const taken = d.reservations.filter(r => r.tripId === trip.id && r.projectId === pid).length;
+        const taken = d.reservations.filter(r => active(r) && r.tripId === trip.id && r.projectId === pid).length;
         if (taken >= p.quota) return { ok: false, msg: `「${p.name}」名额已满` };
         if (p.needId && !validIdCard(payload.idCard)) return { ok: false, msg: `「${p.name}」需登记有效身份证号` };
       }
 
       const now = Date.now();
       for (const pid of projectIds) {
-        if (d.reservations.some(r => r.tripId === trip.id && r.projectId === pid && r.phone === phone)) continue;
-        d.reservations.push({ id: 'R' + now + pid, tripId: trip.id, projectId: pid, name: name.trim(), phone, idCard: payload.idCard || '', createdAt: now });
+        if (d.reservations.some(r => active(r) && r.tripId === trip.id && r.projectId === pid && r.phone === phone)) continue;
+        d.reservations.push({ id: 'R' + now + pid, tripId: trip.id, projectId: pid, name: name.trim(), phone, idCard: payload.idCard || '', createdAt: now, status: 'booked' });
       }
       const u = d.users.find(x => x.phone === phone);
       if (u) { u.name = name.trim(); if (payload.idCard) u.idCard = payload.idCard; }
@@ -139,6 +141,7 @@
       const phone = S();
       if (!phone) return [];
       const d = db();
+      // 含已取消记录（保留取消历史），归还给前端展示
       const rs = d.reservations.filter(r => r.phone === phone);
       const byTrip = {};
       rs.forEach(r => { (byTrip[r.tripId] = byTrip[r.tripId] || []).push(r); });
@@ -156,6 +159,7 @@
               note: p?.note || '', price: p?.price || 0,
               mall: p?.mall || null, needId: !!p?.needId,
               createdAt: r.createdAt, idCard: r.idCard, person: r.name,
+              status: r.status || 'booked', cancelledAt: r.cancelledAt || null, checkedInAt: r.checkedInAt || null,
             };
           }),
           createdAt: Math.max(...rows.map(r => r.createdAt)),
@@ -167,10 +171,15 @@
       await delay(300);
       const phone = S();
       const d = db();
-      const before = d.reservations.length;
-      d.reservations = d.reservations.filter(r => !(r.phone === phone && r.tripId === tripId && r.projectId === projectId));
+      // 保留取消记录而非删除：标记 cancelled，名额即时释放且客户/代理端可见取消历史
+      let n = 0;
+      d.reservations.forEach(r => {
+        if (r.phone === phone && r.tripId === tripId && r.projectId === projectId && active(r)) {
+          r.status = 'cancelled'; r.cancelledAt = Date.now(); n++;
+        }
+      });
       persist(d);
-      return { ok: d.reservations.length < before };
+      return { ok: n > 0, cancelled: n };
     },
 
     // ================= 代理人/管理员端 =================
@@ -223,14 +232,32 @@
       return { ok: true, status: t.status };
     },
 
+    /** 签到确认（代理人/管理员）：学员现场到达集合点后，代理人为其确认；再次调用=撤销。 */
+    async checkIn(tripId, phone) {
+      await delay(200);
+      const me = currentAgent();
+      if (!me) return { ok: false, msg: '请先登录' };
+      const d = db();
+      const t = d.trips.find(x => x.id === tripId);
+      if (!t) return { ok: false, msg: '班期不存在' };
+      if (me.role !== 'admin' && t.createdBy !== me.id) return { ok: false, msg: '不能操作其他代理人的班期' };
+      const rows = d.reservations.filter(r => active(r) && r.tripId === tripId && r.phone === phone);
+      if (!rows.length) return { ok: false, msg: '该客户无有效预约，无法签到' };
+      const wasIn = rows.some(r => r.checkedInAt);
+      const now = wasIn ? null : Date.now();
+      rows.forEach(r => r.checkedInAt = now);
+      persist(d);
+      return { ok: true, checkedIn: !wasIn, name: rows[0].name };
+    },
+
     // ===== 项目管理（仅管理员） =====
     async adminProjects() {
       await delay();
       if (!requireAdmin()) return [];
       const d = db();
       return d.projects.map(p => {
-        const taken = d.reservations.filter(r => r.projectId === p.id).length;
-        const takers = new Set(d.reservations.filter(r => r.projectId === p.id).map(r => r.phone));
+        const taken = d.reservations.filter(r => active(r) && r.projectId === p.id).length;
+        const takers = new Set(d.reservations.filter(r => active(r) && r.projectId === p.id).map(r => r.phone));
         return { ...p, takenTotal: taken, takers: takers.size };
       });
     },
@@ -284,11 +311,12 @@
       const d = db();
       const t = d.trips.find(x => x.id === tripId);
       if (!t) return null;
-      const rs = d.reservations.filter(r => r.tripId === tripId);
+      const rs = d.reservations.filter(r => active(r) && r.tripId === tripId);
       const pax = [];
       rs.forEach(r => {
         let person = pax.find(x => x.phone === r.phone);
-        if (!person) { person = { name: r.name, phone: r.phone, idCard: r.idCard, items: [] }; pax.push(person); }
+        if (!person) { person = { name: r.name, phone: r.phone, idCard: r.idCard, items: [], checkedInAt: r.checkedInAt || null }; pax.push(person); }
+        else if (r.checkedInAt) person.checkedInAt = r.checkedInAt;
         const p = d.projects.find(x => x.id === r.projectId);
         if (p) person.items.push({ id: p.id, name: p.name, note: p.note });
       });
@@ -308,7 +336,7 @@
       const d = db();
       const trips = me.role === 'admin' ? d.trips : d.trips.filter(t => t.createdBy === me.id);
       const myTripIds = new Set(trips.map(t => t.id));
-      const rs = d.reservations.filter(r => myTripIds.has(r.tripId));
+      const rs = d.reservations.filter(r => active(r) && myTripIds.has(r.tripId));
       const byPhone = {};
       rs.forEach(r => {
         (byPhone[r.phone] = byPhone[r.phone] || { name: r.name, phone: r.phone, idCard: r.idCard, items: new Set(), trips: new Set(), count: 0 });

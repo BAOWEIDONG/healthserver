@@ -7,6 +7,7 @@
   const WEEK = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
   const fmtDate = ds => { const d = new Date(ds.replace(/-/g, '/')); return `${d.getMonth() + 1}月${d.getDate()}日(${WEEK[d.getDay()]})`; };
   const fmtTime = ts => { const d = new Date(ts); return `${d.getMonth() + 1}/${d.getDate()}`; };
+  const fmtClock = ts => { const d = new Date(ts); return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
   const maskId = id => id ? id.replace(/(\d{4})\d+(\d{4})/, '$1****$2') : '';
   const gCls = g => g === 'B' ? 'g-b' : g === 'C' ? 'g-c' : g === 'D' ? 'g-d' : '';
 
@@ -165,8 +166,9 @@
     if (!d) return;
     detailData = d;
     const st = tripStatus(d.trip);
+    const ck = d.pax.filter(p => p.checkedInAt).length;
     $('#dm-title').textContent = `${fmtDate(d.trip.date)} ${d.trip.time}`;
-    $('#dm-sub').textContent = `${st.text} · 已约 ${d.pax.length}/${d.trip.seats} 人 · 点击项目行查看该项目的预约名单`;
+    $('#dm-sub').textContent = `${st.text} · 已约 ${d.pax.length}/${d.trip.seats} 人 · 已签到 ${ck}/${d.pax.length} · 点击项目行查看该项目的预约名单`;
     $('#dm-stats').innerHTML = d.stats.filter(s => s.taken > 0 || s.active).map(s => {
       const pct = Math.min(100, Math.round(s.taken / s.quota * 100));
       const full = s.taken >= s.quota;
@@ -180,13 +182,26 @@
       </div>`;
     }).join('') || '<div class="empty">暂无开放项目</div>';
     $('#dm-pax').innerHTML = d.pax.length
-      ? `<table class="pax-table"><tr><th>姓名</th><th>手机号 / 身份证</th><th>预约项目</th></tr>` +
+      ? `<table class="pax-table"><tr><th>姓名</th><th>手机号 / 身份证</th><th>预约项目</th><th>签到</th></tr>` +
         d.pax.map(p => `<tr>
           <td><b>${p.name || '未填写'}</b></td>
           <td>${p.phone}<span class="idcard">${maskId(p.idCard) || ''}</span></td>
           <td>${p.items.map(i => i.name.split(' · ')[0]).map(n => `<span class="who-chip">${n}</span>`).join(' ')}</td>
+          <td class="ck-cell">${p.checkedInAt
+            ? `<span class="ck-badge" title="${fmtClock(p.checkedInAt)} 已签到">已签到 ${fmtClock(p.checkedInAt)}</span>
+               <button class="mini-btn ck-undo" data-checkin="${p.phone}">撤销</button>`
+            : `<button class="mini-btn solid" data-checkin="${p.phone}">确认到场</button>`}</td>
         </tr>`).join('') + '</table>'
       : '<div class="empty">暂无乘客</div>';
+    $('#dm-pax').querySelectorAll('[data-checkin]').forEach(b => {
+      b.onclick = async () => {
+        if (b.classList.contains('ck-undo') && !confirm(`撤销「${d.pax.find(x => x.phone === b.dataset.checkin)?.name || '该客户'}」的到场签到？`)) return;
+        const res = await Api.checkIn(detailData.trip.id, b.dataset.checkin);
+        if (!res.ok) return toast(res.msg);
+        toast(res.checkedIn ? `已确认 ${res.name} 到场签到` : '已撤销签到');
+        openDetail(detailData.trip.id);
+      };
+    });
     $('#dm-stats').querySelectorAll('.stat-proj').forEach(row => {
       row.onclick = () => openProjSheet(row.dataset.pid);
     });

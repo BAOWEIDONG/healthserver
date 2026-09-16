@@ -333,15 +333,20 @@
     state.mine.forEach(m => {
       const el = document.createElement('div');
       el.className = 'card mine-card';
+      const activeItems = m.items.filter(i => i.status !== 'cancelled');
+      const ckIn = activeItems.some(i => i.checkedInAt);
       const st = m.status === 'open' ? '<span class="badge-on">报名中</span>' : m.status === 'closed' ? '<span class="badge-off">班期已关闭</span>' : '<span class="badge-off">班期已删除</span>';
+      const ckB = ckIn ? '<span class="ck-badge">已签到</span>' : '';
       el.innerHTML = `
         <div class="mc-head">
           <div class="mc-date">${fmtDate(m.trip.date)}</div>
-          <div class="mc-pax">${m.trip.time} 发车 · ${m.items.length} 项</div>
-          ${st}
+          <div class="mc-pax">${m.trip.time} 发车 · ${activeItems.length} 项</div>
+          ${ckB}${st}
         </div>
         <div class="trip-meta">${m.trip.meetup}</div>
-        <div class="mc-items">${m.items.map(i => `<span class="who-chip">${i.name.split(' · ')[0]}</span>`).join('')}</div>
+        <div class="mc-items">${m.items.map(i => i.status === 'cancelled'
+          ? `<span class="who-chip cancel">${i.name.split(' · ')[0]} · 已取消</span>`
+          : `<span class="who-chip">${i.name.split(' · ')[0]}</span>`).join('')}</div>
         <div style="display:flex;justify-content:flex-end;margin-top:4px">
           <button class="btn-link">查看详情 ›</button>
         </div>`;
@@ -355,10 +360,12 @@
     const m = state.mine.find(x => x.tripId === tripId);
     if (!m) return;
     state.detailTrip = tripId;
+    const activeItems = m.items.filter(i => i.status !== 'cancelled');
+    const ckAny = m.items.find(i => i.checkedInAt)?.checkedInAt;
     $('#dp-trip').innerHTML = `${fmtDate(m.trip.date)} · ${m.trip.time} 发车<small>集合点：${m.trip.meetup}\n状态：${m.status === 'open' ? '报名中' : m.status === 'closed' ? '班期已关闭（已预约的仍可到院）' : '班期已删除'}</small>`;
     $('#dp-items').innerHTML = m.items.map(i => `
       <div class="dp-row"><div class="k">项目</div><div class="v">
-        <b>${i.name}</b>
+        <b>${i.name}</b>${i.status === 'cancelled' ? ' <span class="ck-badge canc">已取消</span>' : ''}
         <div style="font-size:.75rem;color:var(--ink-3);margin-top:2px">${i.note || ''}</div>
         ${i.mall ? `<div class="mall-row" style="margin-top:8px;padding-top:8px">🏥 北医商城 · ${i.mall.name} <b>${i.mall.price}</b>
           <button class="btn-mall" data-mtype="${i.mall.type || 'mini'}" data-murl="${i.mall.url || ''}">去购买 ›</button></div>` : ''}
@@ -367,25 +374,27 @@
       <div class="dp-row"><div class="k">姓名</div><div class="v">${m.items[0].person}</div></div>
       <div class="dp-row"><div class="k">手机号</div><div class="v">${state.me.phone}</div></div>
       ${m.items[0].idCard ? `<div class="dp-row"><div class="k">身份证</div><div class="v">${m.items[0].idCard.replace(/(\d{4})\d+(\d{4})/, '$1****$2')}</div></div>` : ''}
+      <div class="dp-row"><div class="k">到场签到</div><div class="v" style="${ckAny ? 'color:var(--ok);font-weight:600' : 'color:var(--ink-3)'}">${ckAny ? `已签到 · ${fmtTime(ckAny)}` : '未签到 · 到场由代理人确认后更新'}</div></div>
       <div class="dp-row"><div class="k">提交时间</div><div class="v">${fmtTime(m.createdAt)}</div></div>`;
     $('#dp-items').querySelectorAll('.btn-mall').forEach(b => {
       b.onclick = e => { e.stopPropagation(); openMall(b.dataset.mtype, b.dataset.murl); };
     });
-    $('#dp-cancel').style.display = '';
+    $('#dp-cancel').style.display = activeItems.length ? '' : 'none';
     showView('view-detail');
   }
   $('#dp-back').onclick = () => { showView('view-app'); $('#tabbar').style.display = ''; document.querySelector('[data-tab=mine]').click(); };
   $('#dp-cancel').onclick = () => {
     const m = state.mine.find(x => x.tripId === state.detailTrip);
-    $('#cc-text').textContent = `将取消 ${fmtDate(m.trip.date)} 班期的 ${m.items.length} 个项目预约，名额即时释放，确认取消？`;
+    const n = m.items.filter(i => i.status !== 'cancelled').length;
+    $('#cc-text').textContent = `将取消 ${fmtDate(m.trip.date)} 班期的 ${n} 个项目预约，名额即时释放，取消记录将保留，确认取消？`;
     $('#cancel-modal').style.display = '';
   };
   $('#cc-no').onclick = () => $('#cancel-modal').style.display = 'none';
   $('#cc-yes').onclick = async () => {
     $('#cancel-modal').style.display = 'none';
     const m = state.mine.find(x => x.tripId === state.detailTrip);
-    for (const it of m.items) await Api.cancelReservation(state.detailTrip, it.projectId);
-    toast('已取消预约');
+    for (const it of m.items.filter(i => i.status !== 'cancelled')) await Api.cancelReservation(state.detailTrip, it.projectId);
+    toast('已取消预约，记录已保留');
     showView('view-app');
     document.querySelector('[data-tab=mine]').click();
   };

@@ -55,7 +55,7 @@
     ],
 
     // ===== 预约记录 =====
-    // { id, tripId, projectId, phone, name, idCard, createdAt }
+    // { id, tripId, projectId, phone, name, idCard, createdAt, status:'booked'|'cancelled', cancelledAt, checkedInAt }
     reservations: [],
 
     // ===== 登录验证码 ===== { phone, code, expireAt }
@@ -90,6 +90,8 @@
           p.mall.type = 'mini'; p.mall.url = p.mall.path || '';
         }
       });
+      // 旧预约记录补默认状态 status='booked'（取消/签到能力引入前的老数据）
+      (db.reservations || []).forEach(r => { if (!r.status) r.status = 'booked'; });
     }
     save(db);
     return db;
