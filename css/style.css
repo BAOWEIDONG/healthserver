@@ -83,7 +83,7 @@ section.block { margin-top: 18px; }
 .trip-date { display: flex; align-items: baseline; gap: 10px; }
 .trip-date b { font-size: 1.28rem; font-weight: 700; color: var(--blue-deep); }
 .trip-date span { font-size: .84rem; color: var(--ink-2); }
-.trip-meta { font-size: .8rem; color: var(--ink-3); margin-top: 5px; white-space: pre-line; }
+.trip-meta { font-size: .8rem; color: var(--ink-3); margin-top: 5px; white-space: pre-line; overflow-wrap: anywhere; }
 .seat-pill { font-size: .74rem; font-weight: 600; color: var(--blue); background: var(--blue-soft); border-radius: 999px; padding: 2px 10px; margin-left: auto; flex: none; }
 .seat-pill.full { color: var(--warn); background: var(--warn-bg); }
 
@@ -222,7 +222,17 @@ section.block { margin-top: 18px; }
 .success-tips { margin-top: 14px; font-size: .75rem; color: var(--ink-3); background: var(--bg); border-radius: 10px; padding: 10px 12px; text-align: left; }
 
 /* ===== 我的预约 ===== */
-#view-mine .mine-inner { max-width: 480px; margin: 0 auto; padding: 20px 16px 130px; }
+#view-mine .mine-inner { max-width: 480px; margin: 0 auto; padding: 16px 16px 130px; }
+.mine-head { display: flex; align-items: center; justify-content: space-between; padding: 4px 0 14px; }
+.mh-title { font-size: 1.18rem; font-weight: 700; color: var(--ink); }
+.user-chip-plain {
+  display: flex; align-items: center; gap: 6px; font-size: .76rem; color: var(--blue-deep);
+  background: var(--blue-soft); padding: 4px 12px 4px 4px; border-radius: 999px; cursor: pointer; flex: none;
+}
+.user-chip-plain .avatar {
+  width: 24px; height: 24px; border-radius: 50%; background: var(--blue); color: #fff;
+  font-size: .72rem; font-weight: 700; display: flex; align-items: center; justify-content: center;
+}
 .mine-card { position: relative; }
 .mine-card .mc-head { display: flex; align-items: center; gap: 9px; }
 .mine-card .mc-date { font-size: 1.05rem; font-weight: 700; color: var(--blue-deep); }

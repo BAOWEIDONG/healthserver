@@ -60,7 +60,7 @@
     <div class="step" id="step3"><span class="dot">3</span><br>填信息</div>
   </div>
 
-  <div class="wrap">
+  <div class="wrap" id="main-wrap">
 
     <!-- 视图1：选班车 -->
     <section class="block" id="view-trips">
@@ -105,9 +105,14 @@
   </div>
 
   <!-- 我的预约 -->
-  <section class="block" id="view-mine" style="display:none">
+  <section id="view-mine" style="display:none">
     <div class="mine-inner">
-      <div class="block-title">我的预约</div>
+      <div class="mine-head">
+        <div class="mh-title">我的预约</div>
+        <div class="user-chip-plain" id="mine-user">
+          <span class="avatar" id="uc-avatar2">客</span><span id="uc-name2">我的</span>
+        </div>
+      </div>
       <div id="mine-list"></div>
     </div>
   </section>

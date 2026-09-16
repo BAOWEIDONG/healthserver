@@ -52,6 +52,12 @@
     updateBar();
     window.scrollTo(0, 0);
   }
+  /** 重置到选班车（预约完成/取消后调用） */
+  function resetBooking() {
+    state.tripId = null;
+    state.sel.clear();
+    setStep(1);
+  }
 
   // ================= 登录 =================
   let codeCd = 0;
@@ -67,6 +73,7 @@
       if (t <= 0) { clearInterval(iv); btn.disabled = false; btn.textContent = '获取验证码'; }
     }, 1000);
   };
+  $('#lg-code').addEventListener('keydown', e => { if (e.key === 'Enter') $('#lg-submit').click(); });
   $('#lg-submit').onclick = async () => {
     const res = await Api.login($('#lg-phone').value.trim(), $('#lg-code').value.trim());
     if (!res.ok) return toast(res.msg);
@@ -79,13 +86,15 @@
     if (!state.me) { showView('view-login'); return; }
     $('#uc-name').textContent = state.me.name || '我的';
     $('#uc-avatar').textContent = (state.me.name || state.me.phone.slice(-2))[0];
+    $('#uc-name2').textContent = state.me.name || '我的';
+    $('#uc-avatar2').textContent = (state.me.name || state.me.phone.slice(-2))[0];
     showView('view-app');
     $('#tabbar').style.display = '';
     document.querySelector('[data-tab=book]').click();
   }
 
-  // 用户弹窗
-  $('#user-chip').onclick = () => {
+  // 用户弹窗（首页横幅 + 我的预约页头像双入口）
+  $('#user-chip').onclick = $('#mine-user').onclick = () => {
     $('#me-phone').textContent = `${state.me.name || '未填写姓名'} · ${state.me.phone}`;
     $('#me-modal').style.display = '';
   };
@@ -100,12 +109,13 @@
       bar().style.display = mine ? 'none' : '';
       document.querySelector('.hero').style.display = mine ? 'none' : '';
       document.querySelector('.steps').style.display = mine ? 'none' : '';
-      $('#view-trips').style.display = !mine && state.step === 1 ? '' : 'none';
-      $('#view-projects').style.display = !mine && state.step === 2 ? '' : 'none';
-      $('#view-form').style.display = !mine && state.step === 3 ? '' : 'none';
+      $('#main-wrap').style.display = mine ? 'none' : '';
       $('#view-mine').style.display = mine ? '' : 'none';
-      if (mine) loadMine();
-      window.scrollTo(0, 0);
+      if (mine) { loadMine(); return; }
+      // 预约中可往返「我的预约」不丢进度；无进行中的预约则回到第一步并刷新班车
+      if (state.tripId) { setStep(state.step); return; }
+      resetBooking();
+      loadTrips();
     };
   });
 
@@ -149,6 +159,7 @@
   // ================= 视图2：项目 =================
   async function loadProjects() {
     const t = state.trips.find(x => x.id === state.tripId);
+    if (!t) { resetBooking(); loadTrips(); return toast('班期已更新，请重新选择'); }
     $('#proj-trip-hint').textContent = `${fmtDate(t.date)} ${t.time} · 单班名额有限`;
     $('#proj-list').innerHTML = '<div class="loader">加载中…</div>';
     state.projects = await Api.listProjects(state.tripId);
@@ -254,7 +265,7 @@
       </div>`).join('');
     $('#sc-tips').innerHTML = `· 请提前 10 分钟到集合点找代理人签到上车<br>· 高峰项目现场排队，请听从医院引导<br>· ${projs.some(p => p.mall) ? '如需购买疗程卡，可在「我的预约」里跳转北医商城' : '祝您体验愉快'}`;
     state.successSnapshot = { trip: t, projs };
-    state.sel.clear();
+    resetBooking();
     showView('view-success');
     $('#tabbar').style.display = 'none';
   }
@@ -343,6 +354,5 @@
   // ================= 启动 =================
   (async () => {
     await enterApp();
-    loadTrips();
   })();
 })();

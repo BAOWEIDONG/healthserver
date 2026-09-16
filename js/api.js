@@ -70,6 +70,19 @@
       });
     },
 
+    /** 代理人端班期列表：代理人只见自己的班期，管理员见全部 */
+    async myTrips() {
+      await delay();
+      const me = currentAgent();
+      if (!me) return [];
+      const d = db();
+      const list = me.role === 'admin' ? d.trips : d.trips.filter(t => t.createdBy === me.id);
+      return list.map(t => {
+        const pax = new Set(d.reservations.filter(r => r.tripId === t.id).map(r => r.phone));
+        return { ...t, takenSeats: pax.size, leftSeats: Math.max(0, t.seats - pax.size) };
+      });
+    },
+
     async listProjects(tripId) {
       await delay();
       const d = db();
@@ -192,11 +205,15 @@
 
     async closeTrip(tripId) {
       await delay(200);
-      if (!currentAgent()) return { ok: false, msg: '请先登录' };
+      const me = currentAgent();
+      if (!me) return { ok: false, msg: '请先登录' };
       const d = db();
       const t = d.trips.find(x => x.id === tripId);
-      if (t) { t.status = t.status === 'open' ? 'closed' : 'open'; persist(d); }
-      return { ok: true };
+      if (!t) return { ok: false, msg: '班期不存在' };
+      if (me.role !== 'admin' && t.createdBy !== me.id) return { ok: false, msg: '不能操作其他代理人的班期' };
+      t.status = t.status === 'open' ? 'closed' : 'open';
+      persist(d);
+      return { ok: true, status: t.status };
     },
 
     // ===== 项目管理（仅管理员） =====

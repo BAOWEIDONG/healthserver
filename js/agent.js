@@ -41,7 +41,7 @@
     $('#who-role').textContent = ROLE_TEXT[myRole];
     $('#tab-projects').style.display = myRole === 'admin' ? '' : 'none';
     $('#tab-accounts').style.display = myRole === 'admin' ? '' : 'none';
-    $('#cust-title').childNodes[0].textContent = myRole === 'admin' ? '客户总览 ' : '我的客户 ';
+    $('#cust-title-text').textContent = myRole === 'admin' ? '客户总览' : '我的客户';
     $('#cust-hint').textContent = myRole === 'admin' ? '全部代理人名下客户' : '客户信息仅您可见，代理人之间相互独立';
     loadAll();
     loadCustomers();
@@ -72,7 +72,7 @@
 
   // ===== 汇总 + 班期列表 =====
   async function loadAll() {
-    const trips = await Api.listTrips();
+    const trips = await Api.myTrips();
     const details = (await Promise.all(trips.map(t => Api.tripDetail(t.id)))).filter(Boolean);
     const paxSet = new Set();
     let resvCount = 0;
@@ -102,7 +102,8 @@
       el.querySelector('[data-act=detail]').onclick = () => openDetail(t.id);
       el.querySelector('[data-act=toggle]').onclick = async () => {
         if (t.status === 'open' && !confirm('关闭后客户将无法预约该班期，确认关闭？')) return;
-        await Api.closeTrip(t.id);
+        const res = await Api.closeTrip(t.id);
+        if (!res.ok) return toast(res.msg);
         toast(t.status === 'open' ? '已关闭报名' : '已重新开启');
         loadAll(); loadCustomers();
       };
