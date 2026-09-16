@@ -48,6 +48,9 @@
     $('#view-trips').style.display = n === 1 ? '' : 'none';
     $('#view-projects').style.display = n === 2 ? '' : 'none';
     $('#view-form').style.display = n === 3 ? '' : 'none';
+    // 切换时由 state 重渲染/重应用选中态，保证勾选始终可见
+    if (n === 1 && state.trips.length) renderTrips();
+    if (n === 2) renderProjSel();
     updateBar();
     window.scrollTo(0, 0);
   }
@@ -136,8 +139,7 @@
 
   // ================= 视图1：班车 =================
   const todayString = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
-  async function loadTrips() {
-    state.trips = await Api.listTrips();
+  function renderTrips() {
     const today = todayString();
     // 只展示可约且未过期的班期
     const open = state.trips.filter(t => t.status === 'open' && t.date >= today);
@@ -150,7 +152,7 @@
       el.innerHTML = `
         <div class="trip-pick-row">
           <div class="grow">
-            <div class="trip-date"><b>${fmtDate(t.date)}</b><span>${t.time} 发车</span></div>
+            <div class="trip-date"><b>${fmtDate(t.date)}</b><span class="trip-time">${t.time} 发车</span></div>
             <div class="trip-meta">${t.meetup}</div>
             <div class="quota-text"><span>已约 ${t.takenSeats}/${t.seats} 人</span><span>${full ? '已满员' : `余 ${t.leftSeats} 座`}</span></div>
           </div>
@@ -161,6 +163,10 @@
       $('#trip-list').appendChild(el);
     });
   }
+  async function loadTrips() {
+    state.trips = await Api.listTrips();
+    renderTrips();
+  }
   function chooseTrip(tripId) {
     state.tripId = tripId;
     state.sel.clear();
@@ -169,6 +175,12 @@
   }
 
   // ================= 视图2：项目 =================
+  // 重新把选中态应用到项目卡（来回切步骤时保持可见）
+  function renderProjSel() {
+    document.querySelectorAll('#proj-list .card[data-pid]').forEach(card => {
+      card.classList.toggle('sel', state.sel.has(card.dataset.pid));
+    });
+  }
   async function loadProjects() {
     const t = state.trips.find(x => x.id === state.tripId);
     if (!t) { resetBooking(); loadTrips(); return toast('班期已更新，请重新选择'); }
@@ -184,6 +196,7 @@
       const full = p.left <= 0;
       const el = document.createElement('div');
       el.className = 'card' + (full ? ' disabled' : '') + (state.sel.has(p.id) ? ' sel' : '');
+      el.dataset.pid = p.id;
       const pct = Math.min(100, Math.round(p.taken / p.quota * 100));
       const tags = [];
       if (p.firstFree) tags.push('<span class="tag">首次免费</span>');
@@ -240,6 +253,7 @@
   function openConfirm() {
     const t = state.trips.find(x => x.id === state.tripId);
     const projs = state.projects.filter(p => state.sel.has(p.id));
+    const fee = projs.reduce((s, p) => s + (p.price || 0), 0);
     const rows = [
       ['班车', `${fmtDate(t.date)} ${t.time}`],
       ['集合点', t.meetup],
@@ -247,10 +261,20 @@
       ['手机号', state.me.phone],
     ];
     if ($('#f-id').value.trim()) rows.push(['身份证', $('#f-id').value.trim().replace(/(\d{4})\d+(\d{4})/, '$1****$2')]);
-    rows.push(['项目', projs.map(p => p.name).join('、')]);
-    const fee = projs.reduce((s, p) => s + (p.price || 0), 0);
-    if (fee) rows.push(['现场费用', `约 ¥${fee}（线下支付）`]);
-    $('#cf-list').innerHTML = rows.map(r => `<div class="row"><span>${r[0]}</span><span>${r[1]}</span></div>`).join('');
+    const projList = `<div class="cf-sec">预约项目（${projs.length} 项）</div>` +
+      projs.map(p => {
+        const gCls = p.group === 'B' ? 'g-b' : p.group === 'C' ? 'g-c' : p.group === 'D' ? 'g-d' : '';
+        const note = p.note || '';
+        return `<div class="cf-item">
+          <div class="proj-group ${gCls}">${p.group}</div>
+          <div class="grow">
+            <div class="cf-item-name">${p.name}</div>
+            ${note ? `<div class="cf-item-note">${note}</div>` : ''}
+          </div>
+        </div>`;
+      }).join('') +
+      (fee ? `<div class="row fee-row"><span>现场费用</span><span>约 ¥${fee}（线下支付）</span></div>` : '');
+    $('#cf-list').innerHTML = rows.map(r => `<div class="row"><span>${r[0]}</span><span>${r[1]}</span></div>`).join('') + projList;
     $('#confirm-modal').style.display = '';
   }
   $('#cf-no').onclick = () => $('#confirm-modal').style.display = 'none';
@@ -277,8 +301,10 @@
     $('#sc-items').innerHTML = projs.map(p => `
       <div class="sc-item">
         <div class="proj-group ${p.group === 'B' ? 'g-b' : p.group === 'C' ? 'g-c' : p.group === 'D' ? 'g-d' : ''}">${p.group}</div>
-        <span>${p.name}</span>
-        <span class="note">${p.note}</span>
+        <div class="grow">
+          <div class="sc-item-name">${p.name}</div>
+          ${p.note ? `<div class="sc-item-note">${p.note}</div>` : ''}
+        </div>
       </div>`).join('');
     $('#sc-tips').innerHTML = `· 请提前 10 分钟到集合点找代理人签到上车<br>· 高峰项目现场排队，请听从医院引导<br>· ${projs.some(p => p.mall) ? '如需购买疗程卡，可在「我的预约」里跳转北医商城' : '祝您体验愉快'}`;
     state.successSnapshot = { trip: t, projs };
@@ -315,11 +341,7 @@
           ${st}
         </div>
         <div class="trip-meta">${m.trip.meetup}</div>
-        <div class="mc-items">${m.items.map(i => `
-          <div style="display:flex;align-items:center;gap:8px;font-size:.85rem">
-            <span style="width:5px;height:5px;border-radius:50%;background:var(--blue);flex:none"></span>
-            <span>${i.name}</span>
-          </div>`).join('')}</div>
+        <div class="mc-items">${m.items.map(i => `<span class="who-chip">${i.name.split(' · ')[0]}</span>`).join('')}</div>
         <div style="display:flex;justify-content:flex-end;margin-top:4px">
           <button class="btn-link">查看详情 ›</button>
         </div>`;

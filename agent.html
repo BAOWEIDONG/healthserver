@@ -9,13 +9,13 @@
 <body>
 
 <!-- 登录 -->
-<div class="wrap" id="login-view" style="padding-top:60px;padding-bottom:40px">
+<div class="wrap no-bars" id="login-view" style="padding-top:60px;padding-bottom:40px">
   <div class="login-hero">
     <div class="logo" style="background:linear-gradient(150deg,#0B5FA5,#1B9AAA)">
       <span style="font-size:1.9rem">🚌</span>
     </div>
     <h1>代理人工作台</h1>
-    <p>大巴到院 · 团期 / 客户 / 项目管理</p>
+    <p>大巴到院 · 班期 / 客户 / 项目管理</p>
   </div>
   <div class="card" style="padding:22px 18px">
     <div class="field">
@@ -50,19 +50,23 @@
     </div>
     <div class="stat-grid">
       <div class="stat-cell"><b id="st-trips">0</b><span>班期总数</span></div>
-      <div class="stat-cell"><b id="st-pax">0</b><span>累计到院人数</span></div>
+      <div class="stat-cell"><b id="st-pax">0</b><span>已约人数</span></div>
       <div class="stat-cell"><b id="st-resv">0</b><span>项目预约单</span></div>
     </div>
   </div>
 
-  <div class="atabs">
-    <button class="atab on" data-tab="trips">🚌 班期管理</button>
-    <button class="atab" data-tab="customers" id="tab-customers">👥 我的客户</button>
-    <button class="atab" data-tab="projects" id="tab-projects" style="display:none">🏥 项目管理</button>
-    <button class="atab" data-tab="accounts" id="tab-accounts" style="display:none">👤 账户管理</button>
+  <!-- 吸顶 Tab -->
+  <div class="atabs" id="atabsSticky">
+    <div class="atabs-inner">
+      <button class="atab on" data-tab="trips">🚌 班期</button>
+      <button class="atab" data-tab="customers" id="tab-customers">👥 客户</button>
+      <button class="atab" data-tab="projects" id="tab-projects" style="display:none">🏥 项目</button>
+      <button class="atab" data-tab="accounts" id="tab-accounts" style="display:none">👤 账户</button>
+    </div>
   </div>
 
-  <div class="wrap" style="padding-bottom:60px">
+  <div class="wrap agent-wrap">
+    <section class="pane-head"><h3 id="pane-title">班期管理</h3></section>
 
     <!-- ============ Tab1 班期管理 ============ -->
     <section id="tab-trips">
@@ -82,7 +86,7 @@
       </section>
 
       <section class="block">
-        <div class="block-title">班期与名单</div>
+        <div class="block-title">班期与名单 <span class="hint">共 <b id="trip-count">0</b> 个班期</span></div>
         <div id="ag-trips"></div>
       </section>
     </section>
@@ -90,7 +94,7 @@
     <!-- ============ Tab2 我的客户 ============ -->
     <section id="tab-customers" style="display:none">
       <section class="block">
-        <div class="block-title"><span id="cust-title-text">我的客户</span> <span class="hint" id="cust-hint"></span></div>
+        <div class="block-title"><span id="cust-count-text"></span></div>
         <div id="cust-list"></div>
         <div class="empty" id="cust-empty" style="display:none">暂无客户（客户在您创建的班期上预约后自动归入）</div>
       </section>
@@ -99,16 +103,16 @@
     <!-- ============ Tab3 项目管理（仅管理员） ============ -->
     <section id="tab-projects" style="display:none">
       <section class="block">
-        <div class="block-title">可预约项目 <span class="hint">仅管理员可配置 · 开关控制客户可否预约</span></div>
+        <div class="block-title">可预约项目 <span class="hint">下架后客户不可约</span></div>
         <div id="ag-projects"></div>
         <button class="btn-step primary" id="p-add" style="width:100%;padding:13px">＋ 新增项目</button>
       </section>
     </section>
 
-    <!-- ============ Tab4 账户管理（仅管理员：管理员+代理人账户） ============ -->
+    <!-- ============ Tab4 账户管理（仅管理员） ============ -->
     <section id="tab-accounts" style="display:none">
       <section class="block">
-        <div class="block-title">代理人 / 管理员账户 <span class="hint">手机号+验证码登录工作台</span></div>
+        <div class="block-title">代理人 / 管理员账户 <span class="hint">手机号+验证码登录</span></div>
         <div id="acc-agents"></div>
         <button class="btn-step primary" id="acc-add" style="width:100%;padding:13px">＋ 新增账户</button>
       </section>
@@ -133,28 +137,36 @@
 <div class="modal-mask" id="proj-modal" style="display:none">
   <div class="modal" style="text-align:left;max-width:380px">
     <h3 style="text-align:center" id="pm-title">新增项目</h3>
-    <div style="max-height:60vh;overflow:auto;padding:0 2px">
+    <div style="max-height:62vh;overflow:auto;padding:0 2px">
+
+      <div class="fsec">基本信息</div>
       <div class="field"><label>项目名称 <span class="req">*</span></label><input id="pm-name" placeholder="例：疼痛治疗 · 黄金雷针" maxlength="30"></div>
       <div class="field-row">
         <div class="field"><label>分组</label>
           <select id="pm-group"><option>A</option><option>B</option><option>C</option><option>D</option></select></div>
         <div class="field"><label>单班名额 <span class="req">*</span></label><input id="pm-quota" type="number" min="1" placeholder="30"></div>
       </div>
+      <div class="field"><label>项目介绍</label><textarea id="pm-desc" placeholder="展示给客户的介绍文案"></textarea></div>
+
+      <div class="fsec">费用与商城卡</div>
       <div class="field-row">
         <div class="field"><label>现场费用 (¥，0=免费)</label><input id="pm-price" type="number" min="0" value="0"></div>
         <div class="field"><label>商城卡价格</label><input id="pm-mallprice" placeholder="例：¥4500 或留空"></div>
       </div>
-      <div class="field"><label>项目介绍</label><textarea id="pm-desc" placeholder="展示给客户的介绍文案"></textarea></div>
-      <div class="field"><label>备注标签（展示在项目卡上）</label><input id="pm-note" placeholder="例：首次免费 · 免挂号 · 需身份证"></div>
       <div class="field"><label>商城卡名称（留空=不展示购买入口）</label><input id="pm-mallname" placeholder="例：美容年卡 · 4次"></div>
       <div class="field-row">
-        <div class="field"><label>购买链接类型</label>
+        <div class="field"><label>链接类型</label>
           <select id="pm-malltype"><option value="mini">小程序</option><option value="h5">H5 链接</option></select></div>
         <div class="field"><label>购买链接</label><input id="pm-mallurl" placeholder="按类型填写"></div>
       </div>
+
+      <div class="fsec">预约规则</div>
       <label class="checkbox-row"><input type="checkbox" id="pm-needid"> 需登记身份证号</label>
       <label class="checkbox-row"><input type="checkbox" id="pm-queue"> 现场排队</label>
       <label class="checkbox-row" style="margin-bottom:0"><input type="checkbox" id="pm-firstfree"> 首次免费体验</label>
+
+      <div class="fsec">客户卡标签</div>
+      <div class="field" style="margin-bottom:0"><label>备注标签（展示在项目卡上）</label><input id="pm-note" placeholder="例：首次免费 · 免挂号 · 需身份证"></div>
     </div>
     <div class="modal-actions">
       <button class="btn-step" id="pm-cancel">取消</button>
@@ -171,7 +183,7 @@
     <div class="field"><label>登录手机号 <span class="req">*</span></label>
       <input id="am-phone" type="tel" maxlength="11" inputmode="numeric" placeholder="11位手机号，用于验证码登录"></div>
     <div class="field" style="margin-bottom:0"><label>角色</label>
-      <select id="am-role"><option value="agent">代理人</option><option value="admin">管理员</option></select></div>
+      <select id="am-role"><option value="agent">代理人（班期 + 自己的客户）</option><option value="admin">管理员（项目 + 账户 + 全量）</option></select></div>
     <div class="modal-actions">
       <button class="btn-step" id="am-cancel">取消</button>
       <button class="btn-step primary" id="am-save">保存</button>
@@ -183,6 +195,7 @@
 <div class="modal-mask" id="cust-modal" style="display:none">
   <div class="modal" style="text-align:left;max-width:360px">
     <h3 style="text-align:center">编辑客户档案</h3>
+    <p style="text-align:center;font-size:.76rem;color:var(--ink-3);margin-bottom:12px">补充因预约时未填写的信息，便于到院核验</p>
     <div class="field"><label>手机号</label><input id="cm-phone" disabled style="background:var(--bg);color:var(--ink-2)"></div>
     <div class="field"><label>姓名</label><input id="cm-name" maxlength="20"></div>
     <div class="field" style="margin-bottom:0"><label>身份证号</label><input id="cm-id" maxlength="18"></div>

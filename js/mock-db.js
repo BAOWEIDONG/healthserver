@@ -24,7 +24,7 @@
         desc: '针对颈肩腰腿慢性疼痛的针刀治疗，免挂号，首次免费体验，现场排队。',
         needId: true, queue: true, firstFree: true,
         quota: 30, price: 0, note: '首次免费 · 免挂号 · 需身份证+手机号登记',
-        mall: { name: '黄金雷针月卡 · 8次', price: '价格待定', type: 'mini', url: '' },
+        mall: { name: '黄金雷针月卡 · 8次', price: '¥4500', type: 'mini', url: '' },
       },
       {
         id: 'P2', name: '全科问诊 · 体检报告解读', group: 'B', active: true,
@@ -74,11 +74,23 @@
   });
 
   const load = () => {
+    let db = null;
     try {
       const raw = localStorage.getItem(DB_KEY);
-      if (raw) return JSON.parse(raw);
+      if (raw) db = JSON.parse(raw);
     } catch (e) { /* ignore */ }
-    const db = seed();
+    if (!db) db = seed();
+    else {
+      // 数据迁移：黄金雷针月卡价格定档 ¥4500（旧占位同步更新，避免老缓存仍显示"价格待定"）
+      const mesh = db.projects && db.projects.find(p => p.id === 'P1');
+      if (mesh && mesh.mall && mesh.mall.price === '价格待定') mesh.mall.price = '¥4500';
+      // 旧 schema 迁移: 早期 mall 用 appid/path，统一转标准 type/url
+      (db.projects || []).forEach(p => {
+        if (p.mall && !p.mall.type && p.mall.path) {
+          p.mall.type = 'mini'; p.mall.url = p.mall.path || '';
+        }
+      });
+    }
     save(db);
     return db;
   };
