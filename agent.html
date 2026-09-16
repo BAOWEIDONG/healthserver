@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>代理人工作台 · 大巴到院管理</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- 登录 -->
+<div class="wrap" id="login-view" style="padding-top:56px;max-width:400px">
+  <div class="card" style="padding:26px 20px">
+    <div style="text-align:center;margin-bottom:18px">
+      <div style="font-size:2.2rem">🚌</div>
+      <h2 style="font-size:1.2rem">代理人工作台</h2>
+      <p style="font-size:.82rem;color:var(--ink-3);margin-top:4px">大巴到院 · 团期与名单管理</p>
+    </div>
+    <div class="field">
+      <label>邀请码 <span class="req">*</span></label>
+      <input id="lg-code" placeholder="演示邀请码：8888" maxlength="8">
+    </div>
+    <button class="btn-primary" id="lg-btn">进入工作台</button>
+    <p style="font-size:.76rem;color:var(--ink-3);text-align:center;margin-top:14px">
+      客户端入口：让客户扫码打开 index.html（index 页面）
+    </p>
+  </div>
+</div>
+
+<!-- 工作台 -->
+<div id="work-view" style="display:none">
+
+  <div class="agent-header">
+    <div class="who">
+      <h2 id="who-name">代理人工作台</h2>
+      <button class="mini-btn" id="btn-logout" style="background:rgba(255,255,255,.14);border-color:transparent;color:#fff">退出</button>
+    </div>
+    <div class="stat-grid">
+      <div class="stat-cell"><b id="st-trips">0</b><span>班期总数</span></div>
+      <div class="stat-cell"><b id="st-pax">0</b><span>累计到院人次</span></div>
+      <div class="stat-cell"><b id="st-resv">0</b><span>项目预约单</span></div>
+    </div>
+  </div>
+
+  <div class="wrap">
+
+    <!-- 新建班期 -->
+    <section class="block">
+      <div class="block-title">新建班期 <span class="hint">每周最多 2 班 · 40座/班</span></div>
+      <div class="card">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="field"><label>日期 <span class="req">*</span></label><input id="nt-date" type="date"></div>
+          <div class="field"><label>发车时间</label><input id="nt-time" type="time" value="08:30"></div>
+        </div>
+        <div class="field">
+          <label>集合点</label>
+          <select id="nt-meetup">
+            <option>国贸集合点 · 大巴车</option>
+            <option>西单集合点 · 大巴车</option>
+            <option>望京集合点 · 大巴车</option>
+          </select>
+        </div>
+        <button class="btn-primary" id="nt-btn" style="padding:11px">创建班期</button>
+      </div>
+    </section>
+
+    <!-- 班期列表 -->
+    <section class="block">
+      <div class="block-title">班期与名单</div>
+      <div id="ag-trips"></div>
+    </section>
+  </div>
+</div>
+
+<!-- 班期详情弹层 -->
+<div class="modal-mask" id="detail-modal" style="display:none">
+  <div class="modal" style="text-align:left;max-height:82vh;overflow:auto">
+    <h3 id="dm-title" style="text-align:center"></h3>
+    <p style="text-align:center;font-size:.78rem;color:var(--ink-3);margin-bottom:10px" id="dm-sub"></p>
+    <div class="block-title" style="font-size:.9rem">项目预约统计</div>
+    <div id="dm-stats"></div>
+    <div class="block-title" style="font-size:.9rem;margin-top:12px">乘客名单</div>
+    <div id="dm-pax"></div>
+    <button class="btn-primary" id="dm-close" style="margin-top:14px">关闭</button>
+  </div>
+</div>
+
+<script src="js/mock-db.js"></script>
+<script src="js/api.js"></script>
+<script src="js/agent.js"></script>
+</body>
+</html>
