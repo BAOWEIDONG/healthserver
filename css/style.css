@@ -455,12 +455,6 @@ section.block { margin-top: 18px; }
 .role-badge { font-size: .66rem; padding: 1px 7px; border-radius: 6px; font-weight: 600; flex: none; }
 .rb-admin { background: #FCEAE2; color: #B4540A; }
 .rb-agent { background: var(--blue-soft); color: var(--blue-deep); }
-
-/* 名单表格 */
-.pax-table { width: 100%; border-collapse: collapse; }
-.pax-table th { font-size: .74rem; color: var(--ink-3); text-align: left; padding: 6px; border-bottom: 1.5px solid var(--line); }
-.pax-table td { font-size: .82rem; padding: 8px 6px; border-bottom: 1px solid var(--bg); vertical-align: top; }
-.pax-table td .idcard { display: block; font-size: .7rem; color: var(--ink-3); margin-top: 2px; }
 .stat-proj.full .sp-count { color: var(--warn); }
 .stat-proj.full .sp-count b { color: var(--warn); }
 

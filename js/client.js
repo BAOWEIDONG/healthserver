@@ -254,6 +254,7 @@
 
   function openConfirm() {
     const t = state.trips.find(x => x.id === state.tripId);
+    if (!t) return toast('班期已变更，请重新选择');
     const projs = state.projects.filter(p => state.sel.has(p.id));
     const fee = projs.reduce((s, p) => s + (p.price || 0), 0);
     const rows = [
@@ -298,6 +299,7 @@
   // ================= 成功页 =================
   async function showSuccess() {
     const t = state.trips.find(x => x.id === state.tripId);
+    if (!t) return resetBooking();
     const projs = state.projects.filter(p => state.sel.has(p.id));
     $('#sc-trip').innerHTML = `${fmtDate(t.date)} · ${t.time} 发车<small>集合点：${t.meetup}</small>`;
     $('#sc-items').innerHTML = projs.map(p => `
@@ -333,6 +335,7 @@
     }
     $('#mine-list').innerHTML = '';
     state.mine.forEach(m => {
+      if (!m.trip) return; // 班期已删除：跳过渲染（数据保留在历史中）
       const el = document.createElement('div');
       el.className = 'card mine-card';
       const activeItems = m.items.filter(i => i.status !== 'cancelled');
@@ -360,7 +363,7 @@
   // ================= 详情页 =================
   function openDetail(tripId) {
     const m = state.mine.find(x => x.tripId === tripId);
-    if (!m) return;
+    if (!m || !m.trip) return;
     state.detailTrip = tripId;
     const activeItems = m.items.filter(i => i.status !== 'cancelled');
     const ckAny = m.items.find(i => i.checkedInAt)?.checkedInAt;

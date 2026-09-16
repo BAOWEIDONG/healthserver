@@ -182,7 +182,9 @@
         <div class="quota-bar"><i style="width:${pct}%"></i></div>
       </div>`;
     }).join('') || '<div class="empty">暂无开放项目</div>';
-    gFilter = 'all';
+    // 签到等操作后 openDetail 会刷新：仅当切换到不同班期时才重置分组，签到后保留当前分组视图
+    if (detailTripId !== tripId) gFilter = 'all';
+    detailTripId = tripId;
     buildGFilter();
     renderPax();
     $('#dm-stats').querySelectorAll('.stat-proj').forEach(row => {
@@ -195,6 +197,7 @@
 
   // ===== 乘客名单：按预约分组(分类)切换显示 =====
   let gFilter = 'all';
+  let detailTripId = null;
   function buildGFilter() {
     const groups = [...new Set(detailData.pax.flatMap(p => p.items.map(i => i.group)).filter(Boolean))].sort();
     const chips = ['all', ...groups];
